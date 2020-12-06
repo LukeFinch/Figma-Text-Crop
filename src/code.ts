@@ -1,4 +1,4 @@
-import { setCharacters } from "@figma-plugin/helpers";
+import { setCharacters, loadUniqueFonts } from "@figma-plugin/helpers";
 
 
 import { dispatch, handleEvent } from './codeMessageHandler';
@@ -66,12 +66,6 @@ handleEvent('createNode',  async data => {
 			clone.x = 0
 			clone.y = 0
 			
-			// let frame = figma.createFrame()
-			// frame.name = `crop`
-			// frame.x = textNode.x
-			// frame.y = textNode.y
-			// textNode.parent.appendChild(frame)
-			// frame.appendChild(textNode)
 			
 			let lineHeight = (textNode.lineHeight as any) === "AUTO" ? textNode.lineHeight : clone.height
 			component.setPluginData('lineHeight', lineHeight.toString())
@@ -134,7 +128,6 @@ handleEvent('createNode',  async data => {
 handleEvent('updateInstances', () => {
 	console.log('Updating Instances')
 	const componentSetId = figma.root.getSharedPluginData('figma_text_crop.lukefinch.com.github','Crop Node ID')
-	console.log(componentSetId, 'from update instance')
 	const componentSet: ComponentSetNode = figma.getNodeById(componentSetId) as ComponentSetNode
 	console.log(componentSetId, componentSet)
 	var instancesToChange = []
@@ -172,7 +165,8 @@ handleEvent('updateInstances', () => {
 					item.instance.mainComponent = item.newComponent
 					const frameNode = item.instance.children[0] as FrameNode
 					const textNode = frameNode.children[0] as TextNode
-					setCharacters(textNode, item.characters)
+					//setCharacters(textNode, item.characters)
+					textNode.characters = item.characters
 					item.instance.resize(item.width, item.instance.height)
 
 					item.instance.layoutAlign = "STRETCH"
@@ -181,4 +175,32 @@ handleEvent('updateInstances', () => {
 
 
 	})
+})
+
+handleEvent('preloadFonts', async() => {
+	const componentSetId = figma.root.getSharedPluginData('figma_text_crop.lukefinch.com.github','Crop Node ID')
+	if(componentSetId){
+		let fontNames = []
+		
+		const componentSet: ComponentSetNode = figma.getNodeById(componentSetId) as ComponentSetNode
+		componentSet.children.forEach(child => {
+			child = child as ComponentNode;
+			const frameNode = child.children[0] as FrameNode
+			const textNode = frameNode.children[0] as TextNode
+			if(fontNames.find((n: FontName) => n.family == (textNode.fontName as FontName).family && n.style == (textNode.fontName as FontName).style)){
+				//Don't add
+				// console.log('Already exists')
+			} else {
+				fontNames.push(textNode.fontName)
+			}
+	
+		})
+		//console.log(fontNames)		
+		const promises = fontNames.map(async (font: FontName) => {await figma.loadFontAsync(font)})
+		console.log(promises)
+		Promise.all(promises).then(() => {
+			console.log('Dispatching loaded fonts')
+			dispatch('fontsLoaded')
+		})
+	}
 })

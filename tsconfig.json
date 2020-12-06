@@ -1,9 +1,13 @@
 {
 	"compilerOptions": {
 		// this aligns with Vue's browser support
-		"target": "es5",
+		"target": "es6",
 		// if using webpack 2+ or rollup, to leverage tree shaking:
 		"module": "es2015",
-		"moduleResolution": "node"
+		"moduleResolution": "node",
+		"typeRoots": [
+			"./node_modules/@types",
+			"./node_modules/@figma"
+		  ]
 	}
 }

@@ -1,36 +1,49 @@
 <template>
 <div id="ui">
-	<button class="button button--primary" @click='createNode'> Create a Vue3 node </button>
-	<p class="type type--pos-small-normal"> {{message}} </p>
+  <label for="gridSize">Baseline Grid size (0 for no grid rounding)</label>
+  <input v-model="gridSize" type=number/>
+	<button class="button button--primary" @click='createNode'>Create text crop variants</button>
+  <button class="button button--primary" @click='updateInstances'>Update Instances</button>
+	<p class="type type--pos-small-normal"> {{props.message}} </p>
 </div>
 </template>
 
 <script>
 import styles from 'figma-plugin-ds/dist/figma-plugin-ds.css'
 import { dispatch, handleEvent } from "./uiMessageHandler";
+import {ref, onMounted} from "vue"
+
+const gridSize = ref(0)
 
 export default {
-  data() {
-    return {
-      message: ""
-    };
-  },
-  mounted() {
+  props: {
+    message: ""
+  },  
+  setup(props) { 
+  onMounted(() => {
     // Add these lines to initialize the interactive figma-ui components as needed.
-
-
     // The following shows how messages from the main code can be handled in the UI code.
     handleEvent("nodeCreated", nodeID => {
-      this.message = `Node ${nodeID} was created!`;
+      props.message = `Node ${nodeID} was created!`;
     });
-  },
-  methods: {
-    createNode() {
+  })
+  function  createNode() {
       // This shows how the UI code can send messages to the main code.
-      dispatch("createNode");
+      console.log('dispatching')
+      dispatch("createNode", gridSize.value);
     }
+   function updateInstances(){
+     dispatch("updateInstances")
+   } 
+    
+  return {
+    props,
+    gridSize,
+    createNode,
+    updateInstances
   }
-};
+}
+}
 </script>
 
 <style scoped>

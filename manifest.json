@@ -1,7 +1,14 @@
 {
-	"name": "Vue3 Plugin Template",
+	"name": "Text Crop / Leading Trim",
 	"api": "1.0.0",
 	"main": "dist/code.js",
 	"ui": "dist/ui.html",
-	"id": "my-plugin-id"
+	"id": "my-plugin-id",
+	"relaunchButtons": [
+		{
+			"command": "Relaunch",
+			"name": "Text Crop"
+		}
+	]
 }
+	

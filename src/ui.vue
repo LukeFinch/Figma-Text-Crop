@@ -2,8 +2,9 @@
 <div id="ui">
   <label for="gridSize">Baseline Grid size (0 for no grid rounding)</label>
   <input v-model="gridSize" type=number/>
+  <button class="button button--primary" @click='bindComponentSet'>Bind Component</button>
 	<button class="button button--primary" @click='createNode'>Create text crop variants</button>
-  <button class="button button--primary" @click='updateInstances' :disabled='!fontsLoaded'>Update Instances</button>
+  <button class="button button--primary" @click='updateInstances' >Update Instances</button>
     <label for="updateRate">Update Frequency (ms)</label>
     <input v-model="updateFrequency" type=number/>
   <div class="switch">
@@ -31,7 +32,7 @@ export default {
   setup(props) { 
   onMounted(() => {
     //dispatch("preloadFonts")
-    
+
     // Add these lines to initialize the interactive figma-ui components as needed.
     // The following shows how messages from the main code can be handled in the UI code.
     handleEvent("nodeCreated", nodeID => {
@@ -44,6 +45,10 @@ export default {
  
 
   })
+
+  function bindComponentSet(){
+    dispatch('bindComponentSet')
+  }
 
   function dispatchUpdate(){
     if(autoUpdate.value === true){
@@ -79,7 +84,8 @@ export default {
     autoUpdate,
     handleAutoUpdate,
     dispatchUpdate,
-    updateFrequency
+    updateFrequency,
+    bindComponentSet
   }
 }
 }

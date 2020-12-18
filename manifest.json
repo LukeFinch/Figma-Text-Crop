@@ -2,13 +2,20 @@
 	"name": "Text Crop / Leading Trim",
 	"api": "1.0.0",
 	"main": "dist/code.js",
-	"ui": "dist/ui.html",
+	"ui": {
+		"update":"dist/update.html",
+		"create":"dist/create.html"
+	},
+	"menu": [
+		{"name": "Create Variants", "command": "Create"	},
+		{"name": "Update Crops", "command": "Update"	}
+	]
+	,
 	"id": "my-plugin-id",
 	"relaunchButtons": [
 		{
-			"command": "Relaunch",
+			"command": "Update",
 			"name": "Text Crop"
 		}
 	]
 }
-	

@@ -9,7 +9,8 @@ module.exports = (env, argv) => ({
 	devtool: argv.mode === 'production' ? false : 'inline-source-map',
 
 	entry: {
-		ui: './src/ui.ts', // The entry point for your UI code
+		ui: './src/update.ts', // The entry point for your UI code
+		create: './src/create.ts',
 		code: './src/code.ts' // The entry point for your plugin code
 	},
 
@@ -74,23 +75,35 @@ module.exports = (env, argv) => ({
 			? [
 					new VueLoaderPlugin(),
 					new RemovePlugin({
-						after: { include: ['dist/ui.js'] }
+						after: { include: ['dist/update.js'] }
 					}),
 					new HtmlWebpackPlugin({
-						template: './src/ui.html',
+						template: './src/update.html',
 						filename: 'ui.html',
 						inlineSource: '.(js|css|scss)$',
 						chunks: ['ui']
+					}),
+					new HtmlWebpackPlugin({
+						template: './src/create.html',
+						filename: 'create.html',
+						inlineSource: '.(js|css|scss)$',
+						chunks: ['create']
 					}),
 					new HtmlWebpackInlineSourcePlugin()
 			  ]
 			: [
 					new VueLoaderPlugin(),
 					new HtmlWebpackPlugin({
-						template: './src/ui.html',
-						filename: 'ui.html',
+						template: './src/update.html',
+						filename: 'update.html',
 						inlineSource: '.(js|css|scss)$',
 						chunks: ['ui']
+					}),
+					new HtmlWebpackPlugin({
+						template: './src/create.html',
+						filename: 'create.html',
+						inlineSource: '.(js|css|scss)$',
+						chunks: ['create']
 					}),
 					new HtmlWebpackInlineSourcePlugin()
 			  ]

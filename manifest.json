@@ -1,5 +1,5 @@
 {
-	"name": "Text Crop / Leading Trim",
+	"name": "Text Crop",
 	"api": "1.0.0",
 	"main": "dist/code.js",
 	"ui": {
@@ -8,14 +8,18 @@
 	},
 	"menu": [
 		{"name": "Create Variants", "command": "Create"	},
-		{"name": "Update Crops", "command": "Update"	}
+		{"name": "Update Text Crops", "command": "Update"	}
 	]
 	,
 	"id": "my-plugin-id",
 	"relaunchButtons": [
 		{
 			"command": "Update",
-			"name": "Text Crop"
+			"name": "Open Text Crop"
+		},
+		{
+			"command": "Bind",
+			"name": "Bind component"
 		}
 	]
 }

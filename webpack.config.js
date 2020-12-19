@@ -79,9 +79,9 @@ module.exports = (env, argv) => ({
 					}),
 					new HtmlWebpackPlugin({
 						template: './src/update.html',
-						filename: 'ui.html',
+						filename: 'update.html',
 						inlineSource: '.(js|css|scss)$',
-						chunks: ['ui']
+						chunks: ['update']
 					}),
 					new HtmlWebpackPlugin({
 						template: './src/create.html',
@@ -97,7 +97,7 @@ module.exports = (env, argv) => ({
 						template: './src/update.html',
 						filename: 'update.html',
 						inlineSource: '.(js|css|scss)$',
-						chunks: ['ui']
+						chunks: ['update']
 					}),
 					new HtmlWebpackPlugin({
 						template: './src/create.html',

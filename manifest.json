@@ -1,7 +1,25 @@
 {
-	"name": "Vue3 Plugin Template",
+	"name": "Text Crop",
 	"api": "1.0.0",
 	"main": "dist/code.js",
-	"ui": "dist/ui.html",
-	"id": "my-plugin-id"
+	"ui": {
+		"update":"dist/update.html",
+		"create":"dist/create.html"
+	},
+	"menu": [
+		{"name": "Create Variants", "command": "Create"	},
+		{"name": "Update Text Crops", "command": "Update"	}
+	]
+	,
+	"id": "929005326496632575",
+	"relaunchButtons": [
+		{
+			"command": "Update",
+			"name": "Open Text Crop"
+		},
+		{
+			"command": "Bind",
+			"name": "Bind component"
+		}
+	]
 }

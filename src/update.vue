@@ -23,7 +23,7 @@
     <div class="flex column justify-content-between align-items-center">
 
     <div v-if="isBound" class="mb-xxsmall">
-      <span class="type type--small">Bound to <span class="type--medium">{{boundName}}</span> in <span class="type--medium">{{boundDoc}}</span></span>
+      <span class="type type--small">Bound to <span class="type--medium">{{boundName}}&nbsp;</span><span class="type type--xxsmall">[{{boundId}}]</span></span>
     </div>
      <div v-else class="mb-xxsmall">
       <span class="type type--small">Select a Text Crop component to bind to</span>
@@ -118,10 +118,12 @@ export default {
  })
 
  handleEvent("bindingData", (data) => {
+
+   console.log('data in vue',data)
+
     boundName.value = data[0]
-    boundDoc.value  = data[1]
-    boundId.value   = data[2]
-    boundKey.value  = data[3]
+    boundId.value   = data[1]
+    boundKey.value  = data[2]
 
     isBound.value = !data.some(n => typeof n == 'undefined')
    
@@ -173,7 +175,6 @@ export default {
     isBound,
     initialIsBound,
     boundName,
-    boundDoc,
     boundId,
     boundKey,
     props,

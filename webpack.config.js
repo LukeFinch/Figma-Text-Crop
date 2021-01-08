@@ -9,7 +9,7 @@ module.exports = (env, argv) => ({
 	devtool: argv.mode === 'production' ? false : 'inline-source-map',
 
 	entry: {
-		ui: './src/update.ts', // The entry point for your UI code
+		update: './src/update.ts', // The entry point for your UI code
 		create: './src/create.ts',
 		code: './src/code.ts' // The entry point for your plugin code
 	},

@@ -1,7 +1,4 @@
 import component from '*.vue';
-import { rejects } from 'assert';
-import { freemem } from 'os';
-import { getTransitionRawChildren } from 'vue';
 import { dispatch, handleEvent } from './codeMessageHandler';
 var documentName = (node: any) => node.type == "DOCUMENT" ? node.name : documentName(node.parent)
 switch (figma.command) {
@@ -22,22 +19,15 @@ switch (figma.command) {
 	 width: 240,
 	 height: 100
  })
- sendBindingToUI()
+
  break
- case 'Bind':
- figma.showUI(__uiFiles__.update, {
-	 width: 240,
-	 height: 100
- })
- bindToSelection(figma.currentPage.selection)
- break;
  default:
 	 figma.showUI(__uiFiles__.update)
 }
-// figma.showUI(__uiFiles__.ui);
 
-const nodeWidth = 300
-// The following shows how messages from the UI code can be handled in the main code.
+
+const nodeWidth = 400
+
 
 
 handleEvent("resizeUI", (size) => {
@@ -65,45 +55,16 @@ handleEvent('createNode',  async (gridSize) => {
 
 
 
-
-
-handleEvent('updateInstances', async () => {
-
-	figma.root.setRelaunchData({'Update':'Launch the text crop plugin to resize text crop components'})
-
-	const componentSetKey = await figma.clientStorage.getAsync('CropKey')
-	const componentSetId = await figma.clientStorage.getAsync('CropID')
-
-	let setNode = figma.getNodeById(componentSetId)
-
-	if(setNode !== null){
-		if(setNode.type == "COMPONENT_SET" && setNode.getPluginData('gridSize')){		
-			//Component set exists within the doc.
-			updateInstances(setNode)
-		} else {
-			//Component set is in a published library		
-			figma.importComponentSetByKeyAsync(componentSetKey).then(
-				resolved => updateInstances(resolved),
-				rejected => {
-					console.error(rejected)
-					figma.notify('Couldn\'t find a text crop component, if it is in another library, ensure it is published')
-				}
-			)
-		}
-
-	}
-
-	
-
+handleEvent('updateInstances', () => {
+		figma.root.setRelaunchData({'Update':'Launch the text crop plugin to resize text crop components'})
+	updateInstances()	
 })
 
 
-function updateInstances(componentSet: ComponentSetNode){
-	
+function updateInstances(){	
+	const t0 = Date.now()	
+	let instances = figma.currentPage.findAll(n => n.type == "INSTANCE" && n.getPluginData('TextCropComponent') == 'true')
 	var instancesToChange = []
-	componentSet.children.forEach((child: ComponentNode) => {
-		let instances = figma.currentPage.findAll(n => n.type === "INSTANCE" && n.mainComponent == child)
-		const gridSize = Number(componentSet.getPluginData('gridSize'))
 		if(instances.length){
 			instances.forEach((instance: InstanceNode) => {				
 				//Hug vertically
@@ -114,6 +75,7 @@ function updateInstances(componentSet: ComponentSetNode){
 				const frameNode = instance.children[0] as FrameNode		
 				const textNode = frameNode.children[0] as TextNode
 				const lineHeight = parseFloat(frameNode.getPluginData('lineHeight'))
+				const gridSize = parseFloat(frameNode.getPluginData('gridSize'))
 									
 				const newHeight  =  textNode.height - lineHeight
 				if (instance.paddingBottom !== newHeight) {
@@ -124,96 +86,21 @@ function updateInstances(componentSet: ComponentSetNode){
 
 			
 		}
-	})
+	
 	instancesToChange.forEach(item => {				
 					let inst = item.instance as InstanceNode
-					inst.paddingBottom = item.newHeight
-
-
-									
+					inst.paddingBottom = item.newHeight									
 
 	})
-	
+	const t1 = Date.now()
+	console.log(`updateInstances took ${t1-t0}ms to update ${instancesToChange.length} of ${instances.length} possible instances`)
 }
 
-function bindToSelection(sel){
-	console.log(sel)
-
-	let componentSet: ComponentSetNode = null
 
 
-	if(sel.length != 1 ){
-		figma.notify('Please select one instance of Text Crop component to bind')
-	} if (sel[0].type == "INSTANCE"){
-		let inst = sel[0] as InstanceNode
-		if(inst.mainComponent.parent.type == "COMPONENT_SET" && inst.mainComponent.parent.getPluginData('gridSize') !== ''){	
-			componentSet = inst.mainComponent.parent as ComponentSetNode			
-		}
-	} if(sel[0].type == "COMPONENT_SET" && sel[0].getPluginData('gridSize') !== ''){
-		componentSet = sel[0] as ComponentSetNode
-	}
-	if(sel[0].type == "COMPONENT" && sel[0].parent.type == "COMPONENT_SET" && sel[0].parent.getPluginData('gridSize') !== ''){
-		componentSet = sel[0].parent as ComponentSetNode
-	}
-	
-	if(componentSet !== null){
-		console.log('Binding to selection')
-		console.log(componentSet.id,componentSet.name,componentSet.key)
-		console.log(componentSet)
-		figma.clientStorage.setAsync('CropID',componentSet.id)
-		figma.clientStorage.setAsync('CropName', componentSet.name)
-		figma.clientStorage.setAsync('CropKey', componentSet.key)
-		//figma.clientStorage.setAsync('CropDoc', documentName(componentSet))
-
-		//figma.notify(`Bound to component: ${componentSet.name} [${componentSet.id} in ${documentName(componentSet)}]`)
-		sendBindingToUI()
-	}
-}
-
-handleEvent('bindComponentSet',() => {	
-	let sel = figma.currentPage.selection
-	bindToSelection(sel)
-})
-
-figma.on("selectionchange", () => {
-	let cropID = Promise.all([figma.clientStorage.getAsync('CropID')]).then(
-		resolved => {return resolved},
-		rejected => {return undefined}
-	)
-
-	if(cropID){
-		if(figma.currentPage.selection.length == 1){
-			checkBindable(figma.currentPage.selection[0])
-		} else {
-			dispatch('bindable',false)
-		}
-	}
-
-})
 
 
-function checkBindable(sel: BaseNode){
-	
-	if(sel.type !== "COMPONENT_SET" && sel.type !== "INSTANCE" && sel.type !== "COMPONENT"){
-		dispatch('bindable',false)
-	} else {
-		if(sel.type == "COMPONENT_SET" && sel.getPluginData('gridSize') !== ''){
-			dispatch('bindable', true)
-		}
-		if(sel.type == "INSTANCE" && sel.mainComponent.parent.type == "COMPONENT_SET"){
-			if(sel.mainComponent.parent.getPluginData('gridSize') !== ''){
-	
-				dispatch('bindable', true)
-			}
-		}
-		if(sel.type == "COMPONENT" && sel.parent.type == 'COMPONENT_SET'){
-			if(sel.parent.getPluginData('gridSize') !== ''){
-				dispatch('bindable', true)
-			}
-		}
-	}
 
-}
 
 /*
 * @param {number} gridSize The size of the grid we round the lineheight to
@@ -238,7 +125,7 @@ async function cropStyles(gridSize: number, styles: Array<string>, parent: Compo
 			//Make a new component
 			let component = figma.createComponent()
 
-			component.setRelaunchData({'Bind': 'Bind component for text cropping'})
+
 					
 			//component.name = style.name.split('/').map((str,index) => str = `Group${index}=${str}` ).join(',')
 			component.name = style.name
@@ -321,6 +208,14 @@ async function cropStyles(gridSize: number, styles: Array<string>, parent: Compo
 			frame.setPluginData('after', baseline.toPrecision(3).toString())
 			frame.setPluginData('lineHeight', lineHeight.toString())
 			frame.setPluginData('style', style.id)
+			var rootData = {
+				fontName: style.fontName,
+				fontSize: style.fontSize,	
+				before: tempText.y.toPrecision(3).toString(),
+				after: baseline.toPrecision(3).toString()
+			}
+			console.log(rootData)
+			figma.root.setSharedPluginData('TextCrop',style.name, JSON.stringify(rootData))
 
 			component.description =
 			`crop before: ${tempText.y.toPrecision(3).toString()}px\ncrop after: ${baseline.toPrecision(3).toString()}px\n---\nCreated by Text Crop Plugin`
@@ -340,7 +235,7 @@ async function cropStyles(gridSize: number, styles: Array<string>, parent: Compo
 
 			component.y = yOffset
 			yOffset += textNode.height + gridSize**2
-			
+			component.setPluginData('TextCropComponent', 'true')
 			nodes.push(component)
 		}
 		);
@@ -357,15 +252,11 @@ async function cropStyles(gridSize: number, styles: Array<string>, parent: Compo
 
 		console.log(componentSet.id, 'from create function')
 		componentSet.setPluginData('gridSize', gridSize.toString())
-		componentSet.setRelaunchData({'Bind': 'Bind to this component set'})
+
 		componentSet.description = `Text Crop component removes whitespace above and below text.\n${gridSize != 0 ? 'Baseline Grid Size: '+gridSize : ''}`
 
-		figma.clientStorage.setAsync('CropID',componentSet.id)
-		figma.clientStorage.setAsync('CropKey', componentSet.key)
+		figma.currentPage.findAll(n => n.getPluginData('removeme') == 'remove').forEach(removable => removable.remove())
 
-		componentSet.findAll(n => n.getPluginData('removeme') == 'remove').forEach(removable => removable.remove())
-		//figma.clientStorage.setAsync('CropDoc', documentName(componentSet))
-		//figma.notify(`Bound to component: ${componentSet.name} [${componentSet.key}]`)
 	})
 
 
@@ -409,6 +300,7 @@ async function updateComponentSet(gridSize: number){
 							ids.indexOf(styleId) > -1 ? ids.splice(ids.indexOf(styleId),1) : null;
 				
 					component.setRelaunchData({'Bind': 'Bind component for text cropping'})
+					component.setPluginData('TextCropComponent', 'true')
 							
 					component.fills = []
 					
@@ -422,7 +314,7 @@ async function updateComponentSet(gridSize: number){
 					frame.clipsContent = false		
 										
 					textNode.textStyleId = style.id //Probably don't need to do this here...
-					textNode.characters = "Cropped Text"
+					textNode.characters = style.name.split('/')[style.name.split('/').length -1].trim()
 		
 					component.resize(textNode.width,textNode.height) //Resize to fit
 		
@@ -524,25 +416,7 @@ async function updateComponentSet(gridSize: number){
 
 
 
-async function cropTextNode(node: TextNode, gridSize: Number){
-	figma.notify('Cropping text nodes is currently unavailable. Please create components to crop')
-}
-
-function sendBindingToUI(){
-	const bindings = [figma.clientStorage.getAsync('CropName'), figma.clientStorage.getAsync('CropID'), figma.clientStorage.getAsync('CropKey')]
-	Promise.all(bindings).then(
-		resolved => {dispatch('bindingData', resolved), console.log('bound to:', resolved)},
-		rejected => {dispatch('bindingNotFound', rejected), console.log('No bindings found')}
-	)
-}
-
-handleEvent('clearBindings', () => {
-	//figma.clientStorage.setAsync('CropDoc', undefined)
-	figma.clientStorage.setAsync('CropID', undefined)
-	figma.clientStorage.setAsync('CropName', undefined)
-	figma.clientStorage.setAsync('CropKey', undefined)
 
 
-	sendBindingToUI();
 
-})
+

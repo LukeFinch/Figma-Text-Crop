@@ -1,53 +1,15 @@
 <template>
-<transition name=fade>
-<div v-if="!isBound" class="banner">
-    <div class="onboarding-tip">
-    <div class="icon icon--white icon--warning"></div>
-    <div class="onboarding-tip__msg type type--small type--medium type--inverse" style="color: var(--white)">You must bind to a text crop component before updating</div>
-    </div>
-
-</div>
-</transition>
 <div id="ui">
 <div id="updateButtons">
    <div class="switch">
-    <input class="switch__toggle"  :disabled="!isBound" type="checkbox" id="autoSwitch"  v-model="autoUpdate" @change="handleAutoUpdate">
+    <input class="switch__toggle" type="checkbox" id="autoSwitch"  v-model="autoUpdate" @change="handleAutoUpdate">
     <label class="switch__label" for="autoSwitch">Auto Update</label>
   </div>
-  <button class="button button--primary flex-grow justify-content-center" :disabled="autoUpdate || !isBound" @click='updateInstances' ><span v-if="autoUpdate">Updating</span><span v-else>Update</span></button>
+  <button class="button button--primary flex-grow justify-content-center" :disabled="autoUpdate" @click='updateInstances' ><span v-if="autoUpdate">Updating</span><span v-else>Update</span></button>
   </div>
 
-<Disclosure heading="Settings" :section="true" :expanded="!initialIsBound">
+<Disclosure heading="Settings" :section="true" :expanded="false">
 
-    <h2 class="type type--large type--bold">Binding</h2>
-    <div class="flex column justify-content-between align-items-center">
-
-    <div v-if="isBound" class="mb-xxsmall">
-      <span class="type type--small">Bound to <span class="type--medium">{{boundName}}&nbsp;</span><span class="type type--xxsmall">[{{boundId}}]</span></span>
-    </div>
-     <div v-else class="mb-xxsmall">
-      <span class="type type--small">Select a Text Crop component to bind to</span>
-    </div>
-
-    <div class="flex row justify-content-center align-items-center">
-    
-        <button v-if="isBound" class="button button--withIcon" :class="{'button--secondary': !hoverButton, 'button--secondary-destructive': hoverButton, }" @click='unbindComponentSet($event)' @mouseover="hoverButton = true" @mouseleave="hoverButton = false">
-        <div class="icon"
-        :class="{
-          'icon--hyperlink': !hoverButton,
-          'icon--break': hoverButton,
-          'icon--red': hoverButton
-          }"></div>
-        Unbind
-        </button>        
-     
-        <button v-else class="button  button--withIcon" :class="{'button--primary': bindable, 'button--secondary': !bindable}" :disabled="!bindable" @click="bindComponentSet">
-        <div class="icon icon--hyperlink" :class="{'icon--white': bindable}"></div>
-        Bind
-      </button>  
-     
-     </div>
-    </div>
  
     <h2 class="type type--large type--bold mt--medium">Update Frequency</h2>
     
@@ -78,15 +40,10 @@ const autoUpdate = ref(false)
 const updateFrequency = ref(50)
 
 const hoverButton = ref(false)
-const isBound = ref(true)
-const boundName = ref(String)
-const boundDoc = ref(String)
-const boundId = ref(String)
-const boundKey = ref(String)
-const initialIsBound = ref(Boolean)
 
 
-const bindable = ref(false)
+
+
 
 
 export default {
@@ -105,50 +62,9 @@ export default {
         resizeObserver.observe(app)
 
 
-
-    handleEvent("nodeCreated", nodeID => {
-      props.message = `Node ${nodeID} was created!`;
-    });
-
-
- 
- handleEvent("bindable", (data) => {
-   console.log("Set bindable to:", data)
-   bindable.value = data
- })
-
- handleEvent("bindingData", (data) => {
-
-   console.log('data in vue',data)
-
-    boundName.value = data[0]
-    boundId.value   = data[1]
-    boundKey.value  = data[2]
-
-    isBound.value = !data.some(n => typeof n == 'undefined')
-   
-    if(initialIsBound.value == null){
-      initialIsBound.value = isBound.value
-    }
-
- })
- handleEvent("bindingNotFound", () => {
-   isBound.value = false
- })
-
   })
 
-  function bindComponentSet($event){
-    if($event.shiftKey){
-      console.log('clearing bindings')
-      dispatch('clearBindings')
-    } else {
-      dispatch('bindComponentSet')
-    }
-  }
-  function unbindComponentSet($event){
-    dispatch('clearBindings')
-  }
+ 
 
   function dispatchUpdate(){
     if(autoUpdate.value === true){
@@ -172,21 +88,12 @@ export default {
    } 
     
   return {
-    isBound,
-    initialIsBound,
-    boundName,
-    boundId,
-    boundKey,
     props,
     updateInstances,
     autoUpdate,
     handleAutoUpdate,
     dispatchUpdate,
     updateFrequency,
-    bindComponentSet,
-    unbindComponentSet,
-    bindable,
-    hoverButton 
   }
 }
 }

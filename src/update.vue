@@ -3,15 +3,26 @@
 <div id="updateButtons">
    <div class="switch">
     <input class="switch__toggle" type="checkbox" id="autoSwitch"  v-model="autoUpdate" @change="handleAutoUpdate">
-    <label class="switch__label" for="autoSwitch">Auto Update</label>
+    <label class="switch__label" for="autoSwitch">Auto Crop</label>
   </div>
-  <button class="button button--primary flex-grow justify-content-center" :disabled="autoUpdate" @click='updateInstances' ><span v-if="autoUpdate">Updating</span><span v-else>Update</span></button>
+  <button class="button button--primary flex-grow justify-content-center" :disabled="autoUpdate" @click='updateInstances' ><span v-if="autoUpdate">Cropping</span><span v-else>Crop</span></button>
   </div>
 
 <Disclosure heading="Settings" :section="true" :expanded="false">
 
- 
-    <h2 class="type type--large type--bold mt--medium">Update Frequency</h2>
+   
+    <h2 class="type type--large type--bold mt--medium">Crop to Grid</h2>
+    
+     
+    <div class="input input--with-icon flex row">
+    <div class="icon icon--paragraph-spacing"></div>
+    <input type="number" class="input__field" style="text-align: right" name="gridSize" @input="handleGridSize" min="0" v-model="gridSize">
+    <label class="label">px</label>
+    </div>
+
+    <div class="onboarding-tip__msg">Rounds the size of the frame.<br>Leave at 0 for no rounding</div>
+
+    <h2 class="type type--large type--bold mt--medium">Crop Frequency</h2>
     
      
     <div class="input input--with-icon flex row">
@@ -19,27 +30,37 @@
     <input type="number" class="input__field" style="text-align: right" name="frequency" min="10" max="99999" v-model="updateFrequency">
     <label class="label">ms</label>
     </div>
-
-    <div class="onboarding-tip__msg">Here you can set how often Auto Update resizes your instances</div>
+    <div  class="onboarding-tip__msg">Here you can set how often Auto Crop crops your instances</div>
+    <!-- <section v-if="updateFrequency == 8080" >
     
-
+    <h2 class="type type--large type--bold mt--medium">Replace Keys</h2>  
+     
+    <div class="input input--with-icon flex row">
+    <div class="icon icon--key"></div>
+    <input  class="input__field" style="text-align: right" name="componentKey" v-model="componentKey">
+ 
+    </div>
+   <button class="button button--primary flex-grow justify-content-center"  @click='updateLegacies' >Replace Old</button>
+    <button class="button button--primary flex-grow justify-content-center"  @click='swapText' >Swap Text Layer</button>
+    <div class="onboarding-tip__msg">This is a secret! replace the component key here</div>
+    </section>   -->
 
 </Disclosure>
   </div>
 </template>
 
 <script>
-import styles from 'figma-plugin-ds/dist/figma-plugin-ds.css'
+import  'figma-plugin-ds/dist/figma-plugin-ds.css'
 import { dispatch, handleEvent } from "./uiMessageHandler";
 import {ref, onMounted, watchEffect} from "vue"
-import { setInterval } from 'timers';
 import  Disclosure  from './components/Disclosure.vue'
-import { once } from 'events';
+
 
 const autoUpdate = ref(false)
 const updateFrequency = ref(50)
+const gridSize = ref(0)
+const componentKey = ref('a46bf185241459316d7c3843a39027b19ce27032')
 
-const hoverButton = ref(false)
 
 
 
@@ -61,18 +82,32 @@ export default {
         });
         resizeObserver.observe(app)
 
+      handleEvent('gridSize', size => {
+        gridSize.value = size
+      })
+
+      handleEvent('componentKey',key =>{
+        componentKey.value = key
+      })
 
   })
+
+  function handleGridSize(){
+    dispatch('gridSize', gridSize.value)
+  }
+
 
  
 
   function dispatchUpdate(){
     if(autoUpdate.value === true){
 
-      dispatch('updateInstances')
+      dispatch('updateInstances', 'clock')
     }
     //dispatch('autoUpdate')
   }
+
+
 
   function handleAutoUpdate(){
     if(autoUpdate.value === true){
@@ -85,7 +120,14 @@ export default {
 
    function updateInstances(){
      dispatch("updateInstances")
-   } 
+   }
+
+   function updateLegacies(){
+     dispatch("updateLegacies", componentKey.value)
+   }
+   function swapText(){
+         dispatch("swapText", componentKey.value)
+   }
     
   return {
     props,
@@ -94,6 +136,11 @@ export default {
     handleAutoUpdate,
     dispatchUpdate,
     updateFrequency,
+    handleGridSize,
+    gridSize,
+    updateLegacies,
+    componentKey,
+    swapText
   }
 }
 }

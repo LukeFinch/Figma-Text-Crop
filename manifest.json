@@ -7,19 +7,21 @@
 		"create":"dist/create.html"
 	},
 	"menu": [
-		{"name": "Create Variants", "command": "Create"	},
-		{"name": "Update Text Crops", "command": "Update"	}
-	]
-	,
-	"id": "929005326496632575",
+		{"name": "Auto Crop", "command": "UpdateMenu"	},
+		{"name": "Set Grid Size", "command": "ChangeGrid"	},
+		{"separator": true},
+		{"name": "Create Component", "command": "Create"	}
+	]	,
+	"id": "951930713294228024",
 	"relaunchButtons": [
 		{
 			"command": "Update",
-			"name": "Open Text Crop"
+			"name": "Crop Page"
 		},
 		{
-			"command": "Bind",
-			"name": "Bind component"
-		}
+			"command": "UpdateSelected",
+			"name": "Crop Selected",
+			"multipleSelection": true
+				}
 	]
 }

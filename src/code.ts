@@ -1,422 +1,436 @@
-import component from '*.vue';
+
+//Make it always show the relaunch button
+figma.root.setRelaunchData({'Update':'Launch the text crop plugin to resize text crop components'})
+
 import { dispatch, handleEvent } from './codeMessageHandler';
+import makeCropComponent from './makeCropComponent'
+
+type ContainerNode = BaseNode & ChildrenMixin;
+const isContainerNode = (n :BaseNode) :n is ContainerNode => !!(n as any).children
+import {prompt} from './prompt'
+
 var documentName = (node: any) => node.type == "DOCUMENT" ? node.name : documentName(node.parent)
+console.log(figma.command)
 switch (figma.command) {
  case 'Create':
- if(figma.getLocalTextStyles().length > 0){	 
- figma.showUI(__uiFiles__.create, {
-	 width: 240,
-	 height: 100
- })
-
- } else {
-	 //figma.notify('Text crop requires local text styles')
-	 figma.closePlugin('Text crop requires local text styles')
- } 
+	 makeCropComponent()
+	 figma.closePlugin()
+//  figma.showUI(__uiFiles__.create, {
+// 	 width: 240,
+// 	 height: 100
+//  })
  break
  case 'Update':
- figma.showUI(__uiFiles__.update, {
-	 width: 240,
-	 height: 100
- })
+	 async function handleUpdate() {
+		 await updateInstances(true)
+	 }
+	 handleUpdate();
+break;
+case 'UpdateMenu':
+async function loadUI(){
+	figma.showUI(__uiFiles__.update, {
+		width: 240,
+		height: 100,
+		visible: false
+	})
+	let grid = await figma.clientStorage.getAsync('gridSize')
+	let key = await figma.clientStorage.getAsync('componentKey')
+	dispatch('gridSize',grid)
+	dispatch('componentKey',key)
+	console.log('showing the ui now...',grid,key)
+	figma.ui.show()
+}
+loadUI()
+ break;
+ case 'UpdateSelected':
+	updateInstances(true);
+ break;
+ case 'SwapText':
+	 //Disabled for now, we'll do it in a later version
+	 //figma.clientStorage.setAsync('componentKey', undefined)
+	 async function doTextSwap(){
+		console.log(figma.currentPage.findOne(node => node.type == "INSTANCE" || node.type == "COMPONENT" && node.getPluginData('TextCrop') == 'true'))
+	// async function runPrompt(){
+	// 	let value = await prompt('Prompt Title','Some Description Text','placeholder',true)
+	// 	console.log('the value of prompt is:',value)
+	// }
+	// runPrompt()
+ 
+	//We need a component key to import and switch
+	var key:string = await figma.clientStorage.getAsync('componentKey')
+	console.log(key)
+	if(key == undefined){
+		//There is no key - a nice UXey solution would be great here...
+		//If they have already updated an instance, we store the key.
+		//Maybe they haven't made a text crop component.. we should tell them to do that maybe?
+		//figma.notify("You've never made one..") -- they could be in a team where someone else has made one..
+		//Lets try and find one in their current page..
+		try{
+			let node = (figma.currentPage.findOne(node => node.type == "INSTANCE" || node.type == "COMPONENT" && node.getPluginData('TextCrop') == 'true') as InstanceNode) as InstanceNode | ComponentNode
+			let comp: ComponentNode = node.type == "INSTANCE" ? (node as InstanceNode).mainComponent : (node as ComponentNode);
+			let key: string = comp.key
+			let status: PublishStatus = await comp.getPublishStatusAsync()
+			switch (status){
+				case "UNPUBLISHED":
+					figma.notify('Your Text Crop Component is unpublished, it is recommended to publish the library')
+					break;
+				case "CHANGED":
+					figma.notify('Text Crop component has unpublished changes, it is recommended to publish these changes')
+					break;
+			default: 
+			break;
+			}
+			//replaceTextNodes(key)
+			if(comp.remote){
+				replaceTextNodes(await figma.importComponentByKeyAsync(key))
+			} else {
+				replaceTextNodes(comp)
+			}
+			} catch(e){
+			console.log(e)
+			figma.notify(`Couldn't find a TextCrop component to swap with, insert one on the page and try again`,{timeout: 5000})
+			figma.closePlugin()
+		}
+	} else {
+		replaceTextNodes(await figma.importComponentByKeyAsync(key))
+	}
+	} doTextSwap();
+ break;
+ case 'ChangeGrid':
 
- break
+	promptGrid()
+
+ 
+ break;
  default:
 	 figma.showUI(__uiFiles__.update)
 }
 
+let waitingClock = false //Boolean to handle the clock, if the clock is faster than the script..
 
-const nodeWidth = 400
-
+async function promptGrid(){
+	let value = await prompt('Grid Size','Set your grid size, use 0 for no rounding',await figma.clientStorage.getAsync('gridSize') || 0,false)
+	figma.clientStorage.setAsync('gridSize',value)
+	figma.closePlugin()
+}
 
 
 handleEvent("resizeUI", (size) => {
 	figma.ui.resize(size[0],size[1])
 })
 
+handleEvent('gridSize', size => {
+	figma.clientStorage.setAsync('gridSize', size.toString())
+})
 
-handleEvent('createNode',  async (gridSize) => {
-	 
-	if(figma.currentPage.selection.length == 1 && figma.currentPage.selection[0].type == "COMPONENT_SET"){
-		let sel = figma.currentPage.selection[0] as ComponentSetNode
-		updateComponentSet(gridSize)
-	} else {
-		let dummy = figma.createComponent()
-		dummy.name = 'dummy'
-		dummy.setPluginData('removeme','remove')
-		let parent = figma.combineAsVariants([dummy],figma.currentPage)
-		let styleIds = figma.getLocalTextStyles().map(n => n.id)
-		cropStyles(gridSize,styleIds,parent)
-	}
-
-
-		
+handleEvent('createNode', _ => {
+makeCropComponent()
 });
 
 
 
-handleEvent('updateInstances', () => {
-		figma.root.setRelaunchData({'Update':'Launch the text crop plugin to resize text crop components'})
-	updateInstances()	
+handleEvent('updateInstances', async (data) => {
+	if(data == "clock" && waitingClock == false){
+		updateInstances(false)	
+	} else {
+		updateInstances(false)
+	}
+})
+
+handleEvent('updateLegacies', key => {
+	updateLegacy(key)
+})
+
+handleEvent('swapText', key => {
+	replaceTextNodes(key)
 })
 
 
-function updateInstances(){	
-	const t0 = Date.now()	
-	let instances = figma.currentPage.findAll(n => n.type == "INSTANCE" && n.getPluginData('TextCropComponent') == 'true')
-	var instancesToChange = []
-		if(instances.length){
-			instances.forEach((instance: InstanceNode) => {				
-				//Hug vertically
-				instance.layoutMode = "VERTICAL"
-				instance.primaryAxisSizingMode = "AUTO"
-
-
-				const frameNode = instance.children[0] as FrameNode		
-				const textNode = frameNode.children[0] as TextNode
-				const lineHeight = parseFloat(frameNode.getPluginData('lineHeight'))
-				const gridSize = parseFloat(frameNode.getPluginData('gridSize'))
-									
-				const newHeight  =  textNode.height - lineHeight
-				if (instance.paddingBottom !== newHeight) {
-				instancesToChange.push({instance: instance, newHeight: newHeight, width: instance.width, gridSize: gridSize })	
-				}
+async function updateInstances(shouldClose){
 	
-			})
-
-			
-		}
+	let keys = new Set()
 	
-	instancesToChange.forEach(item => {				
-					let inst = item.instance as InstanceNode
-					inst.paddingBottom = item.newHeight									
-
-	})
-	const t1 = Date.now()
-	console.log(`updateInstances took ${t1-t0}ms to update ${instancesToChange.length} of ${instances.length} possible instances`)
-}
-
-
-
-
-
-
-
-/*
-* @param {number} gridSize The size of the grid we round the lineheight to
-* @param {Array<String>} styles An Array of styleIDs to make new variants from. 
-* @param {ComponentSetNode} parent The parent component set to insert the variant into
-*/
-async function cropStyles(gridSize: number, styles: Array<string>, parent: ComponentSetNode){
-	//Generator function
-	let yOffset = 0
+	var grid = parseFloat(await figma.clientStorage.getAsync('gridSize'))
+	var instances: InstanceNode[];
 	
-	const textStyles = styles.map(id => {
-		return figma.getStyleById(id).type == "TEXT" ? figma.getStyleById(id) : null	
-	}) as Array<TextStyle>
 
-	let promises = textStyles.map(style => figma.loadFontAsync(style.fontName))
+	
+	waitingClock = true;
 
-	let nodes: Array<ComponentNode> = []
-	await Promise.all(promises).then(async() => {
-
-		textStyles.forEach(style => {
-			let xOffset = 0
-			//Make a new component
-			let component = figma.createComponent()
-
-
-					
-			//component.name = style.name.split('/').map((str,index) => str = `Group${index}=${str}` ).join(',')
-			component.name = style.name
-			component.fills = []
-			//Add text node to component
-			let textNode: TextNode = figma.createText()
-			textNode.name = "Cropped Text"
-			textNode.constraints = {
-				horizontal: "STRETCH",
-				vertical: "MIN"
-			}
-			
-
-			//create a frame to put the text inside
-			let frame = figma.createFrame()
-			frame.fills = []
-			frame.clipsContent = false
-			frame.appendChild(textNode)
-
-			component.appendChild(frame)
-
-			frame.name = "Cropped Text Container"
-				
-
-			textNode.textStyleId = style.id
-			textNode.characters = "Cropped Text"
-
-
-			component.resize(textNode.width,textNode.height) //Resize to fit
-
-			//Duplicate the text node to make an SVG of it
-			let clone = textNode.clone()
-			clone.characters = 'T'
-			clone.x = 0
-			clone.y = 0
-			
-			
-			let lineHeight = (textNode.lineHeight as any) === "AUTO" ? textNode.lineHeight : clone.height
-			component.setPluginData('lineHeight', lineHeight.toString())
-			
-			let tempText = figma.flatten([clone])
-			let baseline = (lineHeight as number) - (tempText.y + tempText.height)
-
-		
-			let height
-			if(gridSize != 0){
-			height = (Math.ceil((textNode.height - baseline - tempText.y) / gridSize) * gridSize) 
-			} else {
-			height = textNode.height - baseline - tempText.y 
-			}
-		
-
-			
-			frame.resize(nodeWidth, height)
-			textNode.resize(nodeWidth,textNode.height)
-			component.resize(nodeWidth, height)
-
-			component.layoutMode = "VERTICAL"
-			component.primaryAxisSizingMode = "AUTO"
-			component.counterAxisSizingMode = "FIXED"
-			component.layoutGrow = 0
-			component.constraints = {
-				horizontal: "MIN",
-				vertical: "MIN"
-			}
-
-
-
-			frame.layoutAlign = "STRETCH"
-			frame.layoutGrow = 0
-			frame.counterAxisSizingMode = "AUTO" //Fill container vert ?
-			frame.primaryAxisAlignItems = "MIN"
-			frame.counterAxisAlignItems = "MIN"
-			frame.primaryAxisSizingMode = "AUTO" //Fill container horiz
-
-
-			
-			
-			frame.setPluginData('before', tempText.y.toPrecision(3).toString())
-			frame.setPluginData('after', baseline.toPrecision(3).toString())
-			frame.setPluginData('lineHeight', lineHeight.toString())
-			frame.setPluginData('style', style.id)
-			var rootData = {
-				fontName: style.fontName,
-				fontSize: style.fontSize,	
-				before: tempText.y.toPrecision(3).toString(),
-				after: baseline.toPrecision(3).toString()
-			}
-			console.log(rootData)
-			figma.root.setSharedPluginData('TextCrop',style.name, JSON.stringify(rootData))
-
-			component.description =
-			`crop before: ${tempText.y.toPrecision(3).toString()}px\ncrop after: ${baseline.toPrecision(3).toString()}px\n---\nCreated by Text Crop Plugin`
-		
-			textNode.y = -tempText.y
-			textNode.x = 0
-
-			textNode.layoutAlign = "INHERIT"
-			textNode.layoutGrow = 0
-
-			textNode.textAutoResize = "HEIGHT"
-
-			component.x = xOffset
-			
-			
-			tempText.remove()
-
-			component.y = yOffset
-			yOffset += textNode.height + gridSize**2
-			component.setPluginData('TextCropComponent', 'true')
-			nodes.push(component)
-		}
-		);
-
-		let componentSet: ComponentSetNode = figma.combineAsVariants(nodes, figma.currentPage)
-		componentSet.name = "Cropped Text"
-
-
-		
-
-		
-
-		console.log(documentName(componentSet))
-
-		console.log(componentSet.id, 'from create function')
-		componentSet.setPluginData('gridSize', gridSize.toString())
-
-		componentSet.description = `Text Crop component removes whitespace above and below text.\n${gridSize != 0 ? 'Baseline Grid Size: '+gridSize : ''}`
-
-		figma.currentPage.findAll(n => n.getPluginData('removeme') == 'remove').forEach(removable => removable.remove())
-
-	})
-
-
-	// This shows how the main code can send messages to the UI code.
-	//dispatch('nodeCreated', node.id);
-
-}
-
-async function updateComponentSet(gridSize: number){
-	if(figma.currentPage.selection.length > 1 || figma.currentPage.selection[0].type != "COMPONENT_SET"){
-		figma.notify('Please select the component set to update with new styles')
+	if(figma.currentPage.selectedTextRange && figma.currentPage.selectedTextRange.node.parent.getPluginData('TextCrop') == 'true'){
+		instances = [figma.currentPage.selectedTextRange.node.parent as InstanceNode]
 	} else {
-		let sel = figma.currentPage.selection[0]
-		if(sel.type == "COMPONENT_SET" && sel.getPluginData('gridSize') ){
-			sel = sel as ComponentSetNode
-			let textStyles = figma.getLocalTextStyles();
-			var ids = textStyles.map(n => n.id) // Store all the styles
-			let promises = textStyles.map(style => figma.loadFontAsync(style.fontName));
-			Promise.all(promises).then(
-				resolve => {
-					(sel.children as Array<ComponentNode>).forEach(component => {
-						try{
 
-							let frame = component.children[0] as FrameNode
-							let textNode = frame.children[0] as TextNode
+		if(figma.currentPage.selection.length == 0)
+			instances = figma.currentPage.findAll(n => n.type == "INSTANCE" && n.getPluginData('TextCrop') == 'true') as InstanceNode[] //New style
+		}
+		if(figma.currentPage.selection.length > 0){
 
-							let styleId: string = frame.getPluginData('styleId')
-							//figma.notify(styleId)
-							let style: TextStyle = figma.getStyleById(styleId) as TextStyle
-							if(!style){
-							
-							styleId = textNode.getRangeTextStyleId(0,1) as string
-							
-							style = figma.getStyleById(styleId) as TextStyle
-							
-							frame.setPluginData('styleId',styleId)
-							
-							}
-							console.log(ids.indexOf(styleId))
-							//Remove style from list of IDs, so we don't duplicate
-							ids.indexOf(styleId) > -1 ? ids.splice(ids.indexOf(styleId),1) : null;
-				
-					component.setRelaunchData({'Bind': 'Bind component for text cropping'})
-					component.setPluginData('TextCropComponent', 'true')
-							
-					component.fills = []
-					
-					
-					textNode.constraints = {
-						horizontal: "STRETCH",
-						vertical: "MIN"
-					}
-							
-					frame.fills = []
-					frame.clipsContent = false		
-										
-					textNode.textStyleId = style.id //Probably don't need to do this here...
-					textNode.characters = style.name.split('/')[style.name.split('/').length -1].trim()
-		
-					component.resize(textNode.width,textNode.height) //Resize to fit
-		
-					//Duplicate the text node to make an SVG of it
-					let clone = textNode.clone()
-					clone.characters = 'T'
-					clone.x = 0
-					clone.y = 0
-					
-					
-					let lineHeight = (textNode.lineHeight as any) === "AUTO" ? textNode.lineHeight : clone.height
-					component.setPluginData('lineHeight', lineHeight.toString())
-					
-					let tempText = figma.flatten([clone])
-					let baseline = (lineHeight as number) - (tempText.y + tempText.height)
-		
-				
-					let height
-					if(gridSize != 0){
-					height = (Math.ceil((textNode.height - baseline - tempText.y) / gridSize) * gridSize) 
-					} else {
-					height = textNode.height - baseline - tempText.y 
-					}
-				
-		
-					
-					frame.resize(nodeWidth, height)
-					textNode.resize(nodeWidth,textNode.height)
-					component.resize(nodeWidth, height)
-		
-					component.layoutMode = "VERTICAL"
-					component.primaryAxisSizingMode = "AUTO"
-					component.counterAxisSizingMode = "FIXED"
-					component.layoutGrow = 0
-					component.constraints = {
-						horizontal: "MIN",
-						vertical: "MIN"
-					}
-		
-		
-		
-					frame.layoutAlign = "STRETCH"
-					frame.layoutGrow = 0
-					frame.counterAxisSizingMode = "AUTO" //Fill container vert ?
-					frame.primaryAxisAlignItems = "MIN"
-					frame.counterAxisAlignItems = "MIN"
-					frame.primaryAxisSizingMode = "AUTO" //Fill container horiz
-		
-		
-					
-					
-					frame.setPluginData('before', tempText.y.toPrecision(3).toString())
-					frame.setPluginData('after', baseline.toPrecision(3).toString())
-					frame.setPluginData('lineHeight', lineHeight.toString())
-					frame.setPluginData('styleId', styleId)
-		
-					component.description =
-					`crop before: ${tempText.y.toPrecision(3).toString()}px\ncrop after: ${baseline.toPrecision(3).toString()}px\n---\nCreated by Text Crop Plugin`
-				
-					textNode.y = -tempText.y
-					textNode.x = 0
-		
-					textNode.layoutAlign = "INHERIT"
-					textNode.layoutGrow = 0
-		
-					textNode.textAutoResize = "HEIGHT"
-									
-					
-					tempText.remove()
-		
-												
-		
-						} catch(e){
-							figma.notify(e)
-						}
-				
-
-				},
-				reject => {
-
+			let inst: InstanceNode[] = []
+			figma.currentPage.selection.filter(node => isContainerNode(node) || node.getPluginData('TextCrop') == 'true').forEach(node => {
+				if(node.getPluginData('TextCrop') == 'true'){
+					inst.push(node as InstanceNode)
+				} else {
+					(node as ContainerNode).findAll(n => n.getPluginData('TextCrop') == 'true').forEach(i => inst.push(i as InstanceNode))
 				}
-			);
+			})
+			instances = inst
+		}
 
-			
-				
-			console.log(ids)
-			ids.length ? cropStyles(gridSize,ids,sel) : null //Crop the remaining ones.
-			},
-			reject => {
 
-			}
-			
-			)
-		
+	instances.forEach(instance => {
+		keys.add(instance.mainComponent.key)
+		crop(instance, grid)})
+	waitingClock = false
+	//figma.notify(`Cropped ${instances.length} instances, took ${Date.now() - t0} ms`)
+	if(keys.size > 1){
+		console.log("There's more than one component, its probably a bad idea right??")
+	}
+	figma.clientStorage.setAsync('componentKey', keys[0])
+
+	if(shouldClose){
+		figma.closePlugin()
 	}
 
-	}
 }
 
 
 
+//New Crop Methods
+async function crop(node: InstanceNode, gridSize){
+
+	const accurateMode = true //TODO: Make this a switch
+
+	let textNode = node.children[0] as TextNode
+	let fontName = textNode.getRangeFontName(0,1) as FontName
+	await figma.loadFontAsync(fontName)
+	
+	
+	let cropData = figma.root.getPluginData(`${JSON.stringify(fontName)}`)
+	if(cropData == ''){
+	  //No data at all
+	  let dataStore = {}
+	  figma.root.setPluginData(`${JSON.stringify(fontName)}`, JSON.stringify(dataStore))
+	  cropData = "{}"
+	}
+	
+	// textNode.textAutoResize = "HEIGHT"
+	// let textHeight = textNode.height
+	// textNode.textAutoResize = "NONE"
+	
+	if(cropData !== ''){
+
+	  //Object Exists
+		  let data = JSON.parse(cropData) as cropData
+		  if(data[textNode.fontSize]){
+			//If we already have the font size data
+
+			cropNodeWithData(node,data[textNode.fontSize], gridSize)
+		  } else {
+			//We need to make new data for this font size
+			let clone: TextNode = textNode.clone() //Copy the text outside the instance so we can manipulate it
+	
+			const C: number = accurateMode ? clone.fontSize as number: 100 //If it's not in accurate mode, use 100, and use percentages
+			clone.fontSize = C
+			clone.lineHeight = {value: C, unit: "PIXELS"} // Line Height = Font Size, for easy maths
+	
+			clone.textAutoResize = "WIDTH_AND_HEIGHT" // Make it take up the true line height
+			clone.characters = 'T' //We use the letter T to get an accurate baseline and line height
+			clone.x = 0 //Not necessary as such, but cleaner
+			clone.y = 0 //Sets the Y value to 0, so we have a reference point when flattening
+			let H = clone.height
+			let T = figma.flatten([clone]) //Outline the text to make readings from it
+	
+			let F = T.height / C //The font size as a %
+			let A  = T.y /C //The top gap - because we set Y to 0 at clone.y this y offset is the capHeight
+	
+			T.remove() // Delete the clones, clean up our mess as soon as we are done with it
+	  
+			//All of these are percentages
+			let B =  1 - A - F //Subtract top gap and font size from whole height
+			let pT = 0.5 - A // Distance from center of text to capheight
+			let pB = 0.5 - B //Distance from center of text to baseline
+	
+			//Save all of the above to the document, so we don't calculate it twice!  
+			//We store all the previous crop data we do, to save cropping things with the same size.
+			let dataStore = JSON.parse(figma.root.getPluginData(`${JSON.stringify(fontName)}`))
+			let data: cropData = {'A':A, 'B':B, 'pT':pT,'pB':pB}
+			dataStore[C] = data
+			
+			figma.root.setPluginData(`${JSON.stringify(fontName)}`, JSON.stringify(dataStore))
+	
+			cropNodeWithData(node,data, gridSize)
+		  }
+	
+	
+	
+	} else {
+		//oops
+	}
+	
+				
+	}
+	
+	
+	interface cropData {
+	   'A':number, 'B':number, 'pT':number,'pB':number
+	}
+	
+	async function cropNodeWithData(node: InstanceNode, data: cropData, gridSize: number){
+	
+	let A = data.A
+	let B = data.B
+	let pT = data.pT
+	let pB = data.pB
+	
+	
+	let textNode = node.children[0] as TextNode
+	//This method gets the actual height of the text
+	textNode.textAutoResize = "HEIGHT"
+	let textHeight = textNode.height //Actual Height of the text
+	textNode.textAutoResize = "NONE"
+	let nodeSize = textNode.height //The height of the container when its fixed.
+	
+	 let lineHeight = await getLineHeight(textNode)
+	 let n = Math.ceil(textHeight / lineHeight) // Number of lines. Should always be a whole number...
+	
+	 let fontSize = textNode.getRangeFontSize(0,1) as number
+	
+	
+	
+	 //the extra height we add for multiple lines
+	 let halfLeading = (((lineHeight / fontSize) - 1 )/2)
+	
+	 let paddingTop = (pT * fontSize) + ((n-1)*(lineHeight/2)) - (nodeSize/2)
+	
+	
+	 //let paddingTop = (Math.ceil(n/2)*pT * fontSize) + (Math.floor(n/2)*pB * fontSize) + (Math.floor(n/2)*A *fontSize) + ((Math.ceil(n/2) - 1)*B * fontSize)
+	 let paddingBottom = (Math.ceil(n/2)*pB * fontSize) + (Math.floor(n/2)*pT * fontSize) + (Math.floor(n/2)*A *fontSize) + ((Math.ceil(n/2) - 1)*B * fontSize) + (((n-1) * halfLeading) * fontSize) - (nodeSize/2)
+	
+
+	
+	 //TODO: Check the alignment of text in the text box, let users center, top or bottom align
+	 node.paddingTop = paddingTop 
+	 node.paddingBottom = gridSize == 0 ? paddingBottom : (Math.ceil((paddingBottom + paddingTop) / gridSize) * gridSize) - paddingTop
+	
+	
+	 node.counterAxisSizingMode = "AUTO" //Reset incase it got changed
+	
+	
+	}
+	
+	async function getLineHeight(node: TextNode){
+		let lineHeight = node.getRangeLineHeight(0,1)
+		let L
+		if(typeof lineHeight == "object"){
+			if(lineHeight.unit == "PIXELS")
+		{
+			L = lineHeight.value
+		} if(lineHeight.unit == "PERCENT") {
+			L = lineHeight.value * (node.getRangeFontSize(0,1) as number)
+		}
+			if(lineHeight.unit == "AUTO"){
+				let c = node.clone()
+				await figma.loadFontAsync(node.getRangeFontName(0,1) as FontName)
+				c.characters = 'T'
+				c.textAutoResize = "WIDTH_AND_HEIGHT"
+				L = c.height
+				c.remove()
+			}		
+		}
+		return L
+	}
+
+async function updateLegacy(key){
+	//Old versions of text crop, update to the new one
+	var grid = parseFloat(await figma.clientStorage.getAsync('gridSize'))
+	let component = figma.importComponentByKeyAsync(key)
+	let legacies = figma.currentPage.findAll(n => n.type == "INSTANCE" && n.getPluginData('TextCropComponent') == 'true') as InstanceNode[]
+	legacies.forEach(async (node:InstanceNode) => {	
+		let instance = (await component).createInstance()	
+		swapNodes(node,instance)
+		
+	})
+}
+
+function replaceTextNodes(component: ComponentNode){
+
+	//This is clunky ish kinda - secret menu replacer eeek
+
+	//let textNodes = figma.currentPage.findAll(node => node.type == "FRAME" && node.children.length == 1 && node.children[0].type == "TEXT") as FrameNode[]
+
+	let textNodes = figma.currentPage.selection.filter(node => node.type == "TEXT") as TextNode[]
+
+	textNodes.forEach(async (textNode) => {
+		swapNodes(textNode,(component).createInstance())
+	})
+	figma.notify(`Swapped ${textNodes.length} text layers`)
+}
 
 
+async function swapNodes(node: TextNode | InstanceNode | FrameNode, instance: InstanceNode){
+
+	let oldText: TextNode;
+	node.type == "TEXT" ? oldText = node : oldText = node.findChild(n => n.type == "TEXT") as TextNode;	
 
 
+		node.parent.insertChild(node.parent.children.indexOf(node) == -1 ? 0 :node.parent.children.indexOf(node) , instance)
+
+		instance.relativeTransform = node.relativeTransform;
+		instance.resize(node.width,node.height);
+		let newText = instance.children[0] as TextNode
+		await figma.loadFontAsync(newText.fontName as FontName)
+		newText.characters = oldText.characters
+
+		let styleId = oldText.textStyleId
+		if (styleId == ''){
+			let fontName = oldText.getRangeFontName(0,oldText.characters.length) as FontName
+			await figma.loadFontAsync(fontName).then( res => {
+				if(oldText.getRangeTextStyleId(0,oldText.characters.length) != ''){
+					newText.setRangeTextStyleId(0,oldText.characters.length,(oldText.getRangeTextStyleId(0,oldText.characters.length) as string))
+				} else {
+					newText.setRangeFontName(0,oldText.characters.length, oldText.getRangeFontName(0,oldText.characters.length) as FontName),
+					newText.setRangeFontSize(0,oldText.characters.length,oldText.getRangeFontSize(0,oldText.characters.length) as number)
+					newText.setRangeLineHeight(0,oldText.characters.length,oldText.getRangeLineHeight(0,oldText.characters.length) as unknown as any)
+					newText.setRangeTextCase(0,oldText.characters.length,oldText.getRangeTextCase(0,oldText.characters.length) as unknown as any)
+					newText.setRangeTextDecoration(0,oldText.characters.length,oldText.getRangeTextDecoration(0,oldText.characters.length) as unknown as any)
+					newText.setRangeLetterSpacing(0,oldText.characters.length,oldText.getRangeLetterSpacing(0,oldText.characters.length) as unknown as any)
+				 }
+				 if((oldText.getRangeFillStyleId(0,oldText.characters.length) as string) != ''){
+					 newText.setRangeFillStyleId(0,oldText.characters.length,oldText.getRangeFillStyleId(0,oldText.characters.length) as string)
+				 } else {
+					 newText.setRangeFills(0,oldText.characters.length,oldText.getRangeFills(0,oldText.characters.length) as unknown as any)
+				 }
+			})
+		}
+		if(typeof styleId == "symbol"){
+			for(var i = 0; i < oldText.characters.length; i++){
+			let fontName = oldText.getRangeFontName(i,i+1) as FontName
+			await figma.loadFontAsync(fontName).then( res => {
+				if(oldText.getRangeTextStyleId(i,i+1) != ''){
+					newText.setRangeTextStyleId(i,i+1,(oldText.getRangeTextStyleId(i,i+1) as string))
+				} else {
+					newText.setRangeFontName(i,i+1, oldText.getRangeFontName(i,i+1) as FontName),
+					newText.setRangeFontSize(i,i+1,oldText.getRangeFontSize(i,i+1) as number)
+					newText.setRangeLineHeight(i,i+1,oldText.getRangeLineHeight(i,i+1) as unknown as any)
+					newText.setRangeTextCase(i,i+1,oldText.getRangeTextCase(i,i+1) as unknown as any)
+					newText.setRangeTextDecoration(i,i+1,oldText.getRangeTextDecoration(i,i+1) as unknown as any)
+					newText.setRangeLetterSpacing(i,i+1,oldText.getRangeLetterSpacing(i,i+1) as unknown as any)
+				 }
+				 if((oldText.getRangeFillStyleId(i,i+1) as string) != ''){
+					 newText.setRangeFillStyleId(i,i+1,oldText.getRangeFillStyleId(i,i+1) as string)
+				 } else {
+					 newText.setRangeFills(i,i+1,oldText.getRangeFills(i,i+1) as unknown as any)
+				 }
+			})
+			
+		   }
+		} else {
+			newText.textStyleId = oldText.textStyleId
+		}
+		instance.layoutAlign = "STRETCH"
+
+		node.remove()
+		var grid = parseFloat(await figma.clientStorage.getAsync('gridSize'))
+		crop(instance,grid)
+}

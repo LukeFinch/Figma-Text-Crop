@@ -1,0 +1,121 @@
+
+<body>
+    <h2>${title}</h2>
+
+    <p>${description}</p>
+        <input id="prompt" type="text" ${input} onkeyup="success()" "/>
+        <button id="button" ${disabled} onclick="myFunction()">Ok</button>
+    <script>
+
+
+const input = document.getElementById("prompt");
+input.focus()
+
+
+input.addEventListener("keyup", function(event) {
+
+  if (event.keyCode === 13) {
+
+    event.preventDefault();
+
+    document.getElementById("button").click();
+  }
+});
+
+
+    function success() {
+        if(document.getElementById("prompt").value==="") { 
+               document.getElementById('button').disabled = true; 
+           } else { 
+               document.getElementById('button').disabled = false;
+           }
+       }
+
+        function myFunction(){
+            parent.postMessage({ pluginMessage: {"type": 'prompt${t}',   "value": document.getElementById('prompt').value} }, '*')
+        }
+
+
+
+    </script>
+</body>
+<style>
+
+/*  FONTS */
+@font-face {
+  font-family: 'Inter';
+  font-weight: 400;
+  font-style: normal;
+  src: url("https://rsms.me/inter/font-files/Inter-Regular.woff2?v=3.7") format("woff2"), url("https://rsms.me/inter/font-files/Inter-Regular.woff?v=3.7") format("woff");
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-weight: 500;
+  font-style: normal;
+  src: url("https://rsms.me/inter/font-files/Inter-Medium.woff2?v=3.7") format("woff2"), url("https://rsms.me/inter/font-files/Inter-Medium.woff2?v=3.7") format("woff");
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-weight: 600;
+  font-style: normal;
+  src: url("https://rsms.me/inter/font-files/Inter-SemiBold.woff2?v=3.7") format("woff2"), url("https://rsms.me/inter/font-files/Inter-SemiBold.woff2?v=3.7") format("woff");
+}
+body {
+    font-family: 'Inter', sans-serif;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+}
+h2{
+    font-size: 13px;
+    color: black;
+    margin: 0 0 8px 0
+}
+p {
+    font-size: 11px;
+    color: #333;
+    margin: 0 0 8px 0
+}
+input {
+    padding: 4px;
+    font-size: 11px;
+    font-weight: 400;
+    font-family: inter;
+}
+button {
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  color: white;
+  flex-shrink: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  height: 32px;
+  padding: 0 8px 0 8px;
+  text-decoration: none;
+  outline: none;
+  border: 2px solid transparent;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
+
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    min-width: 64px;
+    justify-content: center;
+background-color: #18a0fb;
+}
+button:disabled{ 
+        background-color:#B3B3B3;;      
+}
+div {
+    display: flex;
+    flex-direction: row;
+}
+</style>

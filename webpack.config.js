@@ -10,7 +10,6 @@ module.exports = (env, argv) => ({
 
 	entry: {
 		update: './src/update.ts', // The entry point for your UI code
-		create: './src/create.ts',
 		code: './src/code.ts' // The entry point for your plugin code
 	},
 
@@ -98,12 +97,6 @@ module.exports = (env, argv) => ({
 						filename: 'update.html',
 						inlineSource: '.(js|css|scss)$',
 						chunks: ['update']
-					}),
-					new HtmlWebpackPlugin({
-						template: './src/create.html',
-						filename: 'create.html',
-						inlineSource: '.(js|css|scss)$',
-						chunks: ['create']
 					}),
 					new HtmlWebpackInlineSourcePlugin()
 			  ]

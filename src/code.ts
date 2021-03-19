@@ -2,6 +2,7 @@
 //Make it always show the relaunch button
 figma.root.setRelaunchData({'Update':'Launch the text crop plugin to resize text crop components'})
 
+import { notDeepEqual } from 'assert';
 import { dispatch, handleEvent } from './codeMessageHandler';
 import makeCropComponent from './makeCropComponent'
 
@@ -201,7 +202,12 @@ async function crop(node: InstanceNode, gridSize){
 
 	const accurateMode = true //TODO: Make this a switch
 
-	let textNode = node.children[0] as TextNode
+
+
+	let textNode = (node.children[0] as ContainerNode).children[0] as TextNode
+
+
+
 	let fontName = textNode.getRangeFontName(0,1) as FontName
 	await figma.loadFontAsync(fontName)
 	
@@ -278,21 +284,31 @@ async function crop(node: InstanceNode, gridSize){
 	
 	async function cropNodeWithData(node: InstanceNode, data: cropData, gridSize: number){
 	
+	console.log("cropping",node)
+		console.log(data)
 	let A = data.A
 	let B = data.B
 	let pT = data.pT
 	let pB = data.pB
+	let n: number //number of lines
+	let textNode = (node.children[0] as ContainerNode).children[0] as TextNode
+	console.log('added', A+B+pT+pB)
+	let sizing = textNode.textAutoResize
+	console.log(sizing)
+	console.log(node.getPluginData('multiline'))
 	
-	
-	let textNode = node.children[0] as TextNode
-	//This method gets the actual height of the text
-	textNode.textAutoResize = "HEIGHT"
-	let textHeight = textNode.height //Actual Height of the text
-	textNode.textAutoResize = "NONE"
-	let nodeSize = textNode.height //The height of the container when its fixed.
-	
-	 let lineHeight = await getLineHeight(textNode)
-	 let n = Math.ceil(textHeight / lineHeight) // Number of lines. Should always be a whole number...
+	let lineHeight = await getLineHeight(textNode)
+	if(sizing == "HEIGHT"){
+		//Only need if multiline ? 
+		//This method gets the actual height of the text
+		textNode.textAutoResize = "HEIGHT"
+		let textHeight = textNode.height //Actual Height of the text
+		textNode.textAutoResize = sizing//"NONE"
+		let nodeSize = textNode.height //The height of the container when its fixed.		
+		n = Math.ceil(textHeight / lineHeight) // Number of lines. Should always be a whole number...
+	} else {
+		n = 1
+	}
 	
 	 let fontSize = textNode.getRangeFontSize(0,1) as number
 	
@@ -301,20 +317,21 @@ async function crop(node: InstanceNode, gridSize){
 	 //the extra height we add for multiple lines
 	 let halfLeading = (((lineHeight / fontSize) - 1 )/2)
 	
-	 let paddingTop = (pT * fontSize) + ((n-1)*(lineHeight/2)) - (nodeSize/2)
-	
+	 let paddingTop = (pT * fontSize) + ((n-1)*(lineHeight/2)) // - (nodeSize/2)
+	console.log(paddingTop)
 	
 	 //let paddingTop = (Math.ceil(n/2)*pT * fontSize) + (Math.floor(n/2)*pB * fontSize) + (Math.floor(n/2)*A *fontSize) + ((Math.ceil(n/2) - 1)*B * fontSize)
-	 let paddingBottom = (Math.ceil(n/2)*pB * fontSize) + (Math.floor(n/2)*pT * fontSize) + (Math.floor(n/2)*A *fontSize) + ((Math.ceil(n/2) - 1)*B * fontSize) + (((n-1) * halfLeading) * fontSize) - (nodeSize/2)
+	 let paddingBottom = (Math.ceil(n/2)*pB * fontSize) + (Math.floor(n/2)*pT * fontSize) + (Math.floor(n/2)*A *fontSize) + ((Math.ceil(n/2) - 1)*B * fontSize) + (((n-1) * halfLeading) * fontSize)
 	
+
+	console.log(paddingTop,paddingBottom)
 
 	
 	 //TODO: Check the alignment of text in the text box, let users center, top or bottom align
 	 node.paddingTop = paddingTop 
 	 node.paddingBottom = gridSize == 0 ? paddingBottom : (Math.ceil((paddingBottom + paddingTop) / gridSize) * gridSize) - paddingTop
 	
-	
-	 node.counterAxisSizingMode = "AUTO" //Reset incase it got changed
+
 	
 	
 	}
@@ -433,4 +450,9 @@ async function swapNodes(node: TextNode | InstanceNode | FrameNode, instance: In
 		node.remove()
 		var grid = parseFloat(await figma.clientStorage.getAsync('gridSize'))
 		crop(instance,grid)
+}
+
+
+function gridRound(number,gridSize){
+	return (Math.ceil(number / gridSize)) * gridSize
 }

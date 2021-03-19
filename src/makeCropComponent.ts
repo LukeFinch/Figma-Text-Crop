@@ -1,74 +1,79 @@
-export default function makeCropComponent(){
-async function loadFonts() {
-    await Promise.all([
-        figma.loadFontAsync({
-            family: "Roboto",
-            style: "Regular"
-            })
-    ])
-}
+// export default function makeCropComponent(){
+// async function loadFonts() {
+//     await Promise.all([
+//         figma.loadFontAsync({
+//             family: "Roboto",
+//             style: "Regular"
+//             })
+//     ])
+// }
 
-//Create COMPONENT
-var component = figma.createComponent()
-component.resize(52, 16) 
-component.name = "Text Crop"
-component.relativeTransform = [[1,0,-252.5],[0,1,-0.5]]
-component.x = figma.viewport.center.x
-component.y = figma.viewport.center.y
-component.fills = []
-component.strokes = []
-component.paddingTop = 4.53
-component.paddingBottom = 4
-component.primaryAxisSizingMode = "FIXED"
-component.clipsContent = false
-component.layoutMode = "HORIZONTAL"
-component.counterAxisSizingMode = "AUTO"
-figma.currentPage.appendChild(component)
-
-// Create TEXT
-var textLayer = figma.createText()
-//textLayer.resize(52, 1)
-
-zeroResize(textLayer,52,1/Number.MAX_SAFE_INTEGER)
-
-textLayer.name = "Text Crop"
-textLayer.fills = [{"type":"SOLID","visible":true,"opacity":1,"blendMode":"NORMAL","color":{"r":0,"g":0,"b":0}}]
-textLayer.strokes = []
-textLayer.strokeAlign = "OUTSIDE"
-textLayer.relativeTransform = [[1,0,0],[0,1,0.5]]
-textLayer.y = textLayer.height/2
-textLayer.layoutGrow = 1
-textLayer.autoRename = false
-loadFonts().then(
-(res) => {
-    textLayer.fontName = {
-                        family: "Roboto",
-                        style: "Regular"
-                    }
-    textLayer.characters = "Text Crop"
-    textLayer.fontSize = 12
-    textLayer.textAlignHorizontal = "LEFT"
-    textLayer.textAlignVertical = "CENTER"
-    textLayer.textCase = "ORIGINAL"
-    textLayer.textDecoration = "NONE"
-    textLayer.textAutoResize = "NONE"
-    textLayer.letterSpacing = {"unit":"PERCENT","value":0}
-    textLayer.lineHeight = {"unit":"PIXELS","value":16}
-}
-)
-//Function to set the text layer to be almost 0 px
+import component from "*.vue"
 
 
 
 
+// //Create COMPONENT
+// var component = figma.createComponent()
+// component.resize(52, 16) 
+// component.name = "Text Crop"
+// component.relativeTransform = [[1,0,-252.5],[0,1,-0.5]]
+// component.x = figma.viewport.center.x
+// component.y = figma.viewport.center.y
+// component.fills = []
+// component.strokes = []
+// component.paddingTop = 4.53
+// component.paddingBottom = 4
+// component.primaryAxisSizingMode = "FIXED"
+// component.clipsContent = false
+// component.layoutMode = "HORIZONTAL"
+// component.counterAxisSizingMode = "AUTO"
+// figma.currentPage.appendChild(component)
+
+// // Create TEXT
+// var textLayer = figma.createText()
+// //textLayer.resize(52, 1)
+
+// zeroResize(textLayer,52,1/Number.MAX_SAFE_INTEGER)
+
+// textLayer.name = "Text Crop"
+// textLayer.fills = [{"type":"SOLID","visible":true,"opacity":1,"blendMode":"NORMAL","color":{"r":0,"g":0,"b":0}}]
+// textLayer.strokes = []
+// textLayer.strokeAlign = "OUTSIDE"
+// textLayer.relativeTransform = [[1,0,0],[0,1,0.5]]
+// textLayer.y = textLayer.height/2
+// textLayer.layoutGrow = 1
+// textLayer.autoRename = false
+// loadFonts().then(
+// (res) => {
+//     textLayer.fontName = {
+//                         family: "Roboto",
+//                         style: "Regular"
+//                     }
+//     textLayer.characters = "Text Crop"
+//     textLayer.fontSize = 12
+//     textLayer.textAlignHorizontal = "LEFT"
+//     textLayer.textAlignVertical = "CENTER"
+//     textLayer.textCase = "ORIGINAL"
+//     textLayer.textDecoration = "NONE"
+//     textLayer.textAutoResize = "NONE"
+//     textLayer.letterSpacing = {"unit":"PERCENT","value":0}
+//     textLayer.lineHeight = {"unit":"PIXELS","value":16}
+// }
+// )
+// //Function to set the text layer to be almost 0 px
 
 
-component.appendChild(textLayer)
-component.setPluginData('TextCrop','true')
-textLayer.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update':'Resize All Instances'})
-component.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update':'Resize All Instances'})
-figma.clientStorage.setAsync('componentKey',component.key)
-}
+
+
+
+
+// component.appendChild(textLayer)
+// component.setPluginData('TextCrop','true')
+// textLayer.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update':'Resize All Instances'})
+// component.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update':'Resize All Instances'})
+// figma.clientStorage.setAsync('componentKey',component.key)
+// }
 
 function zeroResize(node, width, height){
 //Workaround to resize a node, if its size is less than 0.01
@@ -82,3 +87,194 @@ group.parent.appendChild(node)
 group.remove()
 }
 }
+
+export default function makeCropComponent(){
+
+// Load FONTS
+async function loadFonts() {
+	await Promise.all([
+		figma.loadFontAsync({
+			family: "Roboto",
+			style: "Regular"
+			})
+	])
+}
+
+
+// Create COMPONENT
+var componentAutoWidth = figma.createComponent()
+componentAutoWidth.resize(52.0000000000, 8.5399999619)
+componentAutoWidth.name = "MultiLine=False"
+componentAutoWidth.relativeTransform = [[1,0,20],[0,1,20]]
+componentAutoWidth.x = 20
+componentAutoWidth.y = 20
+componentAutoWidth.fills = []
+componentAutoWidth.paddingTop = 4.53000020980835
+componentAutoWidth.paddingBottom = 4
+componentAutoWidth.backgrounds = []
+componentAutoWidth.layoutMode = "HORIZONTAL"
+componentAutoWidth.counterAxisSizingMode = "AUTO"
+componentAutoWidth.description = ""
+
+// Create FRAME
+var autoWidthFrame = figma.createFrame()
+//autoWidthFrame.resizeWithoutConstraints(52.0000000000, 0.01)
+
+zeroResize(autoWidthFrame,52,1/Number.MAX_SAFE_INTEGER)
+
+autoWidthFrame.name = "Crop"
+autoWidthFrame.relativeTransform = [[1,0,0],[0,1,4.5299987793]]
+autoWidthFrame.y = 4.529998779296875
+autoWidthFrame.fills = [{"type":"SOLID","visible":false,"opacity":1,"blendMode":"NORMAL","color":{"r":1,"g":1,"b":1}}]
+autoWidthFrame.paddingTop = 8
+autoWidthFrame.paddingBottom = 8
+autoWidthFrame.counterAxisAlignItems = "CENTER"
+autoWidthFrame.backgrounds = [{"type":"SOLID","visible":false,"opacity":1,"blendMode":"NORMAL","color":{"r":1,"g":1,"b":1}}]
+autoWidthFrame.clipsContent = false
+autoWidthFrame.layoutMode = "HORIZONTAL"
+autoWidthFrame.itemSpacing = 10
+componentAutoWidth.appendChild(autoWidthFrame)
+
+// Create TEXT
+var textAutoWidth = figma.createText()
+textAutoWidth.resize(52.0000000000, 16.0000000000)
+textAutoWidth.relativeTransform = [[1,0,0],[0,1,-7.9949998856]]
+textAutoWidth.y = -7.994999885559082
+textAutoWidth.autoRename = false
+loadFonts().then((res) => {
+		textAutoWidth.fontName = {
+			family: "Roboto",
+			style: "Regular"
+		}
+		textAutoWidth.characters = "Text Crop"
+		textAutoWidth.textAlignVertical = "CENTER"
+        textAutoWidth.textAutoResize = "WIDTH_AND_HEIGHT"
+		textAutoWidth.lineHeight = {"unit":"PIXELS","value":16}
+
+})
+autoWidthFrame.appendChild(textAutoWidth)
+
+// Create COMPONENT
+var componentAutoHeight = figma.createComponent()
+componentAutoHeight.resize(52.0000000000, 8.5300006866)
+componentAutoHeight.name = "MultiLine=True"
+componentAutoHeight.relativeTransform = [[1,0,84],[0,1,16]]
+componentAutoHeight.x = 84
+componentAutoHeight.y = 16
+componentAutoHeight.fills = []
+componentAutoHeight.paddingTop = 4.53000020980835
+componentAutoHeight.paddingBottom = 4
+componentAutoHeight.backgrounds = []
+componentAutoHeight.layoutMode = "HORIZONTAL"
+componentAutoHeight.counterAxisSizingMode = "AUTO"
+componentAutoHeight.primaryAxisSizingMode = "FIXED"
+componentAutoHeight.description = ""
+
+// Create FRAME
+var cropFrame = figma.createFrame()
+cropFrame.resizeWithoutConstraints(52.0000000000, 0.01)
+cropFrame.name = "Crop"
+cropFrame.relativeTransform = [[1,0,0],[0,1,4.5299987793]]
+cropFrame.y = 4.529998779296875
+cropFrame.fills = [{"type":"SOLID","visible":false,"opacity":1,"blendMode":"NORMAL","color":{"r":1,"g":1,"b":1}}]
+cropFrame.paddingTop = 0
+cropFrame.paddingBottom = 0
+cropFrame.counterAxisAlignItems = "CENTER"
+cropFrame.primaryAxisSizingMode = "FIXED"
+cropFrame.backgrounds = [{"type":"SOLID","visible":false,"opacity":1,"blendMode":"NORMAL","color":{"r":1,"g":1,"b":1}}]
+cropFrame.clipsContent = false
+cropFrame.layoutMode = "HORIZONTAL"
+cropFrame.layoutGrow = 1
+cropFrame.itemSpacing = 0
+componentAutoHeight.appendChild(cropFrame)
+
+// Create TEXT
+var textAutoHeight = figma.createText()
+textAutoHeight.resize(52.0000000000, 16.0000000000)
+textAutoHeight.relativeTransform = [[1,0,0],[0,1,-8]]
+textAutoHeight.y = -8
+textAutoHeight.autoRename = false
+textAutoHeight.layoutGrow = 1
+
+loadFonts().then((res) => {
+		textAutoHeight.fontName = {
+			family: "Roboto",
+			style: "Regular"
+		}
+		textAutoHeight.characters = "Text Crop"
+		textAutoHeight.textAlignVertical = "CENTER"
+		textAutoHeight.textAutoResize = "HEIGHT"
+		textAutoHeight.lineHeight = {"unit":"PIXELS","value":16}
+
+})
+cropFrame.appendChild(textAutoHeight)
+
+// Create COMPONENT_SET
+var componentSet = figma.combineAsVariants([componentAutoWidth, componentAutoHeight], figma.currentPage)
+componentSet.resize(165.0000000000, 48.5400009155)
+componentSet.name = "Text Crop"
+componentSet.visible = true
+componentSet.locked = false
+componentSet.opacity = 1
+componentSet.blendMode = "PASS_THROUGH"
+componentSet.isMask = false
+componentSet.effects = []
+componentSet.relativeTransform = [[1,0,-49],[0,1,-232]]
+
+componentSet.x = figma.viewport.center.x
+componentSet.y = figma.viewport.center.y
+ 
+
+componentSet.rotation = 0
+componentSet.layoutAlign = "INHERIT"
+componentSet.constrainProportions = false
+componentSet.layoutGrow = 0
+componentSet.exportSettings = []
+componentSet.fills = []
+componentSet.strokes = [{"type":"SOLID","visible":true,"opacity":1,"blendMode":"NORMAL","color":{"r":0.48235294222831726,"g":0.3803921639919281,"b":1}}]
+componentSet.strokeWeight = 1
+componentSet.strokeAlign = "INSIDE"
+componentSet.strokeCap = "NONE"
+componentSet.strokeJoin = "MITER"
+componentSet.strokeMiterLimit = 4
+componentSet.dashPattern = [10,5]
+componentSet.cornerRadius = 5
+componentSet.cornerSmoothing = 0
+componentSet.paddingLeft = 16
+componentSet.paddingRight = 16
+componentSet.paddingTop = 16
+componentSet.paddingBottom = 16
+componentSet.primaryAxisAlignItems = "MIN"
+componentSet.counterAxisAlignItems = "MIN"
+componentSet.primaryAxisSizingMode = "AUTO"
+componentSet.layoutGrids = []
+componentSet.backgrounds = []
+componentSet.clipsContent = true
+componentSet.guides = []
+componentSet.expanded = true
+componentSet.constraints = {"horizontal":"MIN","vertical":"MIN"}
+componentSet.layoutMode = "HORIZONTAL"
+componentSet.counterAxisSizingMode = "AUTO"
+componentSet.itemSpacing = 16
+componentSet.description = ""
+
+
+
+componentAutoWidth.setPluginData('TextCrop','true')
+componentAutoWidth.setPluginData('multiline','false')
+
+
+ componentAutoHeight.setPluginData('TextCrop','true')
+ componentAutoHeight.setPluginData('multiline','true')
+
+textAutoHeight.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update':'Resize All Instances'})
+textAutoWidth.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update':'Resize All Instances'})
+
+componentAutoWidth.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update':'Resize All Instances'})
+componentAutoHeight.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update':'Resize All Instances'})
+
+figma.clientStorage.setAsync('componentKey',componentSet.key)
+
+
+}
+

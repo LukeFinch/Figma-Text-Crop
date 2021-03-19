@@ -1,10 +1,9 @@
 {
-	"name": "Text Crop",
+	"name": "Text Cropadopalous",
 	"api": "1.0.0",
 	"main": "dist/code.js",
 	"ui": {
-		"update":"dist/update.html",
-		"create":"dist/create.html"
+		"update":"dist/update.html"
 	},
 	"menu": [
 		{"name": "Auto Crop", "command": "UpdateMenu"	},
@@ -12,7 +11,7 @@
 		{"separator": true},
 		{"name": "Create Component", "command": "Create"	}
 	]	,
-	"id": "951930713294228024",
+	"id": "DEV-951930713294228024",
 	"relaunchButtons": [
 		{
 			"command": "Update",

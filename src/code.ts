@@ -178,10 +178,12 @@ async function updateInstances(shouldClose){
 			instances = inst
 		}
 
-
+		console.log(instances)
 	instances.forEach(instance => {
 		keys.add(instance.mainComponent.key)
-		crop(instance, grid)})
+	
+		crop(instance, grid)
+	})
 	waitingClock = false
 	//figma.notify(`Cropped ${instances.length} instances, took ${Date.now() - t0} ms`)
 	if(keys.size > 1){
@@ -200,13 +202,14 @@ async function updateInstances(shouldClose){
 //New Crop Methods
 async function crop(node: InstanceNode, gridSize){
 
+
 	const accurateMode = true //TODO: Make this a switch
 
 
 
 	let textNode = (node.children[0] as ContainerNode).children[0] as TextNode
 
-
+	console.log(textNode)
 
 	let fontName = textNode.getRangeFontName(0,1) as FontName
 	await figma.loadFontAsync(fontName)
@@ -214,7 +217,8 @@ async function crop(node: InstanceNode, gridSize){
 	
 	let cropData = figma.root.getPluginData(`${JSON.stringify(fontName)}`)
 	if(cropData == ''){
-	  //No data at all
+		console.log('No data exists')
+	  //No data at all	
 	  let dataStore = {}
 	  figma.root.setPluginData(`${JSON.stringify(fontName)}`, JSON.stringify(dataStore))
 	  cropData = "{}"
@@ -225,43 +229,46 @@ async function crop(node: InstanceNode, gridSize){
 	// textNode.textAutoResize = "NONE"
 	
 	if(cropData !== ''){
-
+		console.log('Some data exists')
 	  //Object Exists
 		  let data = JSON.parse(cropData) as cropData
-		  if(data[textNode.fontSize]){
+		  if(data[textNode.fontSize][await getLineHeight(textNode)]){
 			//If we already have the font size data
 
-			cropNodeWithData(node,data[textNode.fontSize], gridSize)
+			cropNodeWithData(node,data[textNode.fontSize][await getLineHeight(textNode)], gridSize)
 		  } else {
 			//We need to make new data for this font size
 			let clone: TextNode = textNode.clone() //Copy the text outside the instance so we can manipulate it
 	
-			const C: number = accurateMode ? clone.fontSize as number: 100 //If it's not in accurate mode, use 100, and use percentages
-			clone.fontSize = C
-			clone.lineHeight = {value: C, unit: "PIXELS"} // Line Height = Font Size, for easy maths
-	
+			let lH = await getLineHeight(clone)
+			//clone.lineHeight = {value: C, unit: "PIXELS"} // Line Height = Font Size, for easy maths
 			clone.textAutoResize = "WIDTH_AND_HEIGHT" // Make it take up the true line height
 			clone.characters = 'T' //We use the letter T to get an accurate baseline and line height
 			clone.x = 0 //Not necessary as such, but cleaner
 			clone.y = 0 //Sets the Y value to 0, so we have a reference point when flattening
 			let H = clone.height
+			let C = clone.fontSize
 			let T = figma.flatten([clone]) //Outline the text to make readings from it
 	
-			let F = T.height / C //The font size as a %
-			let A  = T.y /C //The top gap - because we set Y to 0 at clone.y this y offset is the capHeight
-	
+			//let F = T.height / C //The font size as a %
+			//let A  = T.y /C //The top gap - because we set Y to 0 at clone.y this y offset is the capHeight
+			let A = T.y
+			let B = H - T.y - T.height
+			let pT = H/2 - A
+			let pB = H/2 - B
+
 			T.remove() // Delete the clones, clean up our mess as soon as we are done with it
 	  
 			//All of these are percentages
-			let B =  1 - A - F //Subtract top gap and font size from whole height
-			let pT = 0.5 - A // Distance from center of text to capheight
-			let pB = 0.5 - B //Distance from center of text to baseline
+			//let B =  1 - A - F //Subtract top gap and font size from whole height
+			//let pT = 0.5 - A // Distance from center of text to capheight
+			//let pB = 0.5 - B //Distance from center of text to baseline
 	
 			//Save all of the above to the document, so we don't calculate it twice!  
 			//We store all the previous crop data we do, to save cropping things with the same size.
 			let dataStore = JSON.parse(figma.root.getPluginData(`${JSON.stringify(fontName)}`))
 			let data: cropData = {'A':A, 'B':B, 'pT':pT,'pB':pB}
-			dataStore[C] = data
+			dataStore[C][lH] = data
 			
 			figma.root.setPluginData(`${JSON.stringify(fontName)}`, JSON.stringify(dataStore))
 	
@@ -285,7 +292,7 @@ async function crop(node: InstanceNode, gridSize){
 	async function cropNodeWithData(node: InstanceNode, data: cropData, gridSize: number){
 	
 	console.log("cropping",node)
-		console.log(data)
+	console.log(data)
 	let A = data.A
 	let B = data.B
 	let pT = data.pT
@@ -309,19 +316,23 @@ async function crop(node: InstanceNode, gridSize){
 	} else {
 		n = 1
 	}
+
+	//this works for single lines!
+	//node.paddingBottom = pB
+	//node.paddingTop = pT
 	
-	 let fontSize = textNode.getRangeFontSize(0,1) as number
+	  let fontSize = textNode.getRangeFontSize(0,1) as number
 	
 	
 	
-	 //the extra height we add for multiple lines
-	 let halfLeading = (((lineHeight / fontSize) - 1 )/2)
+	//  //the extra height we add for multiple lines
+	  let halfLeading = (((lineHeight / fontSize) - 1 )/2)
 	
-	 let paddingTop = (pT * fontSize) + ((n-1)*(lineHeight/2)) // - (nodeSize/2)
-	console.log(paddingTop)
+	  let paddingTop = (pT) + ((n-1)*(lineHeight/2)) // - (nodeSize/2)
+	// console.log(paddingTop)
 	
-	 //let paddingTop = (Math.ceil(n/2)*pT * fontSize) + (Math.floor(n/2)*pB * fontSize) + (Math.floor(n/2)*A *fontSize) + ((Math.ceil(n/2) - 1)*B * fontSize)
-	 let paddingBottom = (Math.ceil(n/2)*pB * fontSize) + (Math.floor(n/2)*pT * fontSize) + (Math.floor(n/2)*A *fontSize) + ((Math.ceil(n/2) - 1)*B * fontSize) + (((n-1) * halfLeading) * fontSize)
+	
+	 let paddingBottom = (Math.ceil(n/2)*pB) + (Math.floor(n/2)*pT) + (Math.floor(n/2)*A) + ((Math.ceil(n/2) - 1)*B) + (((n-1) * halfLeading))
 	
 
 	console.log(paddingTop,paddingBottom)

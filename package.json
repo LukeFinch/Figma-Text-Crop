@@ -5,11 +5,14 @@
 	"license": "MIT",
 	"scripts": {
 		"dev": "webpack --mode=development --watch",
-		"build": "webpack --mode=production"
+		"build": "webpack --mode=production",
+		"preview": "live-server --entry-file='livepreview.html'"
 	},
 	"dependencies": {
+		"@lukefinch/figmaicons": "^1.1.2",
 		"@vue/compiler-sfc": "^3.0.2",
-		"figma-plugin-ds": "^0.1.8"
+		"figma-plugin-ds": "^0.1.8",
+		"live-server": "^1.2.1"
 	},
 	"devDependencies": {
 		"@figma-plugin/helpers": "^0.14.4",
@@ -29,6 +32,6 @@
 		"vue-loader": "^16.0.0-beta.8",
 		"vue-template-compiler": "^2.6.10",
 		"webpack": "^4.32.2",
-		"webpack-cli": "^3.3.2"		
+		"webpack-cli": "^3.3.2"
 	}
 }

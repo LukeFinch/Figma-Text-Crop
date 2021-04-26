@@ -1,80 +1,3 @@
-// export default function makeCropComponent(){
-// async function loadFonts() {
-//     await Promise.all([
-//         figma.loadFontAsync({
-//             family: "Roboto",
-//             style: "Regular"
-//             })
-//     ])
-// }
-
-import component from "*.vue"
-
-
-
-
-// //Create COMPONENT
-// var component = figma.createComponent()
-// component.resize(52, 16) 
-// component.name = "Text Crop"
-// component.relativeTransform = [[1,0,-252.5],[0,1,-0.5]]
-// component.x = figma.viewport.center.x
-// component.y = figma.viewport.center.y
-// component.fills = []
-// component.strokes = []
-// component.paddingTop = 4.53
-// component.paddingBottom = 4
-// component.primaryAxisSizingMode = "FIXED"
-// component.clipsContent = false
-// component.layoutMode = "HORIZONTAL"
-// component.counterAxisSizingMode = "AUTO"
-// figma.currentPage.appendChild(component)
-
-// // Create TEXT
-// var textLayer = figma.createText()
-// //textLayer.resize(52, 1)
-
-// zeroResize(textLayer,52,1/Number.MAX_SAFE_INTEGER)
-
-// textLayer.name = "Text Crop"
-// textLayer.fills = [{"type":"SOLID","visible":true,"opacity":1,"blendMode":"NORMAL","color":{"r":0,"g":0,"b":0}}]
-// textLayer.strokes = []
-// textLayer.strokeAlign = "OUTSIDE"
-// textLayer.relativeTransform = [[1,0,0],[0,1,0.5]]
-// textLayer.y = textLayer.height/2
-// textLayer.layoutGrow = 1
-// textLayer.autoRename = false
-// loadFonts().then(
-// (res) => {
-//     textLayer.fontName = {
-//                         family: "Roboto",
-//                         style: "Regular"
-//                     }
-//     textLayer.characters = "Text Crop"
-//     textLayer.fontSize = 12
-//     textLayer.textAlignHorizontal = "LEFT"
-//     textLayer.textAlignVertical = "CENTER"
-//     textLayer.textCase = "ORIGINAL"
-//     textLayer.textDecoration = "NONE"
-//     textLayer.textAutoResize = "NONE"
-//     textLayer.letterSpacing = {"unit":"PERCENT","value":0}
-//     textLayer.lineHeight = {"unit":"PIXELS","value":16}
-// }
-// )
-// //Function to set the text layer to be almost 0 px
-
-
-
-
-
-
-// component.appendChild(textLayer)
-// component.setPluginData('TextCrop','true')
-// textLayer.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update':'Resize All Instances'})
-// component.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update':'Resize All Instances'})
-// figma.clientStorage.setAsync('componentKey',component.key)
-// }
-
 function zeroResize(node, width, height){
 //Workaround to resize a node, if its size is less than 0.01
 node.resize(width < 0.01 ? 1 : width,height < 0.01 ? 1 : height)
@@ -89,7 +12,7 @@ group.remove()
 }
 
 export default function makeCropComponent(){
-
+if(figma.currentPage.selection.length == 0){
 // Load FONTS
 async function loadFonts() {
 	await Promise.all([
@@ -260,12 +183,10 @@ componentSet.description = ""
 
 
 
-componentAutoWidth.setPluginData('TextCrop','true')
-componentAutoWidth.setPluginData('multiline','false')
-
-
- componentAutoHeight.setPluginData('TextCrop','true')
- componentAutoHeight.setPluginData('multiline','true')
+componentAutoWidth.setSharedPluginData('TextCrop','TexCrop','true')
+componentAutoHeight.setSharedPluginData('TextCrop','TexCrop','true')
+componentAutoWidth.setSharedPluginData('TextCrop','multiline','false')
+componentAutoHeight.setSharedPluginData('TextCrop','multiline','true')
 
 textAutoHeight.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update':'Resize All Instances'})
 textAutoWidth.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update':'Resize All Instances'})
@@ -275,6 +196,26 @@ componentAutoHeight.setRelaunchData({'UpdateSelected':'Resize Selected', 'Update
 
 figma.clientStorage.setAsync('componentKey',componentSet.key)
 
+} else {
+	let sel = figma.currentPage.selection
+	if( sel.length == 1 &&
+		sel[0].getPluginData('TextCrop') &&
+		sel[0].type == "COMPONENT"){
+			sel[0].setSharedPluginData('TextCrop','TextCrop','true')
+			if(Boolean(sel[0].getPluginData('multiline'))){
+				sel[0].setSharedPluginData('TextCrop','multiline','true')
+			} else {
+				sel[0].setSharedPluginData('TextCrop','multiline','false')
+			}
+	} else {
+		console.log(sel[0].getPluginData('TextCrop'))
+	}
+}
 
 }
 
+// handleEvent('updateLegacyComponent',(){
+// 	if(figma.currentPage.selection[0].getPluginData('TextCrop') && figma.currentPage.selection[0].type == "COMPONENT"){
+// 		figma.currentPage.selection[0].setSharedPluginData('TextCrop',)
+// 	}
+// })

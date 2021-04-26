@@ -30,8 +30,8 @@ break;
 case 'UpdateMenu':
 async function loadUI(){
 	figma.showUI(__uiFiles__.update, {
-		width: 240,
-		height: 100,
+		width: 440,
+		height: 300,
 		visible: false
 	})
 	let grid = await figma.clientStorage.getAsync('gridSize')
@@ -50,7 +50,7 @@ loadUI()
 	 //Disabled for now, we'll do it in a later version
 	 //figma.clientStorage.setAsync('componentKey', undefined)
 	 async function doTextSwap(){
-		console.log(figma.currentPage.findOne(node => node.type == "INSTANCE" || node.type == "COMPONENT" && node.getPluginData('TextCrop') == 'true'))
+		console.log(figma.currentPage.findOne(node => node.type == "INSTANCE" || node.type == "COMPONENT" && node.getSharedPluginData('TextCrop','TextCrop') == 'true'))
 	// async function runPrompt(){
 	// 	let value = await prompt('Prompt Title','Some Description Text','placeholder',true)
 	// 	console.log('the value of prompt is:',value)
@@ -67,7 +67,7 @@ loadUI()
 		//figma.notify("You've never made one..") -- they could be in a team where someone else has made one..
 		//Lets try and find one in their current page..
 		try{
-			let node = (figma.currentPage.findOne(node => node.type == "INSTANCE" || node.type == "COMPONENT" && node.getPluginData('TextCrop') == 'true') as InstanceNode) as InstanceNode | ComponentNode
+			let node = (figma.currentPage.findOne(node => node.type == "INSTANCE" || node.type == "COMPONENT" && node.getSharedPluginData('TextCrop','TextCrop') == 'true') as InstanceNode) as InstanceNode | ComponentNode
 			let comp: ComponentNode = node.type == "INSTANCE" ? (node as InstanceNode).mainComponent : (node as ComponentNode);
 			let key: string = comp.key
 			let status: PublishStatus = await comp.getPublishStatusAsync()
@@ -130,6 +130,8 @@ makeCropComponent()
 
 
 
+
+
 handleEvent('updateInstances', async (data) => {
 	if(data == "clock" && waitingClock == false){
 		updateInstances(false)	
@@ -147,8 +149,18 @@ handleEvent('swapText', key => {
 })
 
 
+handleEvent('cropProfile', data =>{
+	console.log('crop profile',data)
+	let sel = figma.currentPage.selection
+	let instances = sel.filter(n => n.getSharedPluginData('TextCrop','multiline') && n.type == "INSTANCE")
+	instances.forEach(instance => {
+		instance.setSharedPluginData('TextCrop','top',data.top)
+		instance.setSharedPluginData('TextCrop','bottom',data.bottom)
+	})
+})
+
 async function updateInstances(shouldClose){
-	
+
 	let keys = new Set()
 	
 	var grid = parseFloat(await figma.clientStorage.getAsync('gridSize'))
@@ -158,30 +170,34 @@ async function updateInstances(shouldClose){
 	
 	waitingClock = true;
 
-	if(figma.currentPage.selectedTextRange && figma.currentPage.selectedTextRange.node.parent.getPluginData('TextCrop') == 'true'){
+	if(figma.currentPage.selectedTextRange && figma.currentPage.selectedTextRange.node.parent.getSharedPluginData('TextCrop','TextCrop') == 'true'){
 		instances = [figma.currentPage.selectedTextRange.node.parent as InstanceNode]
 	} else {
 
 		if(figma.currentPage.selection.length == 0)
-			instances = figma.currentPage.findAll(n => n.type == "INSTANCE" && n.getPluginData('TextCrop') == 'true') as InstanceNode[] //New style
+			instances = figma.currentPage.findAll(n => n.type == "INSTANCE" && n.getSharedPluginData('TextCrop','TextCrop') == 'true') as InstanceNode[] //New style
 		}
 		if(figma.currentPage.selection.length > 0){
 
 			let inst: InstanceNode[] = []
-			figma.currentPage.selection.filter(node => isContainerNode(node) || node.getPluginData('TextCrop') == 'true').forEach(node => {
-				if(node.getPluginData('TextCrop') == 'true'){
+			figma.currentPage.selection.filter(node => isContainerNode(node) || node.getSharedPluginData('TextCrop','TextCrop') == 'true').forEach(node => {
+				if(node.getSharedPluginData('TextCrop','TextCrop') == 'true'){
 					inst.push(node as InstanceNode)
 				} else {
-					(node as ContainerNode).findAll(n => n.getPluginData('TextCrop') == 'true').forEach(i => inst.push(i as InstanceNode))
+					(node as ContainerNode).findAll(n => n.getSharedPluginData('TextCrop','TextCrop') == 'true').forEach(i => inst.push(i as InstanceNode))
 				}
 			})
 			instances = inst
 		}
 
-		console.log(instances)
+		//console.log(instances)
+
+		let sel = figma.currentPage.selection
+		instances = sel.filter(n => n.getSharedPluginData('TextCrop','multiline') && n.type == "INSTANCE") as InstanceNode[]
+
 	instances.forEach(instance => {
-		keys.add(instance.mainComponent.key)
-	
+		console.log(instance.getSharedPluginData('TextCrop','top'))
+		keys.add(instance.mainComponent.key)	
 		crop(instance, grid)
 	})
 	waitingClock = false
@@ -202,25 +218,18 @@ async function updateInstances(shouldClose){
 //New Crop Methods
 async function crop(node: InstanceNode, gridSize){
 
-
-	const accurateMode = true //TODO: Make this a switch
-
-
-
 	let textNode = (node.children[0] as ContainerNode).children[0] as TextNode
-
-	console.log(textNode)
 
 	let fontName = textNode.getRangeFontName(0,1) as FontName
 	await figma.loadFontAsync(fontName)
 	
-	
-	let cropData = figma.root.getPluginData(`${JSON.stringify(fontName)}`)
+	let cropData = figma.root.getSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`)
+
 	if(cropData == ''){
-		console.log('No data exists')
+	  console.log('No data exists')
 	  //No data at all	
-	  let dataStore = {}
-	  figma.root.setPluginData(`${JSON.stringify(fontName)}`, JSON.stringify(dataStore))
+	  let dataStore = {}	  
+	  figma.root.setSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`, JSON.stringify(dataStore))
 	  cropData = "{}"
 	}
 	
@@ -228,22 +237,63 @@ async function crop(node: InstanceNode, gridSize){
 	// let textHeight = textNode.height
 	// textNode.textAutoResize = "NONE"
 	
+	let profileTop = ''
+	let profileBottom = ''
+	switch(node.getSharedPluginData('TextCrop','top')){
+		case 'ascender':
+			profileTop = 'f'
+			break;
+		case 'capheight':
+			profileTop = 'T'
+			break;
+		case 'xheight':
+			profileTop = 'x'
+			break;
+	}
+	if(node.getSharedPluginData('TextCrop','bottom') == 'descender'){
+		profileBottom = 'y'
+	}
+
 	if(cropData !== ''){
 		console.log('Some data exists')
 	  //Object Exists
-		  let data = JSON.parse(cropData) as cropData
-		  if(data[textNode.fontSize][await getLineHeight(textNode)]){
-			//If we already have the font size data
-
-			cropNodeWithData(node,data[textNode.fontSize][await getLineHeight(textNode)], gridSize)
-		  } else {
-			//We need to make new data for this font size
+		let data = JSON.parse(cropData) as cropData
+		let lH = await getLineHeight(textNode)
+		let nodeCropData = data[textNode.fontSize][lH][profileTop+profileBottom]
+		if(typeof nodeCropData !== 'undefined'){
+			cropNodeWithData(
+				node,
+				nodeCropData,
+				gridSize
+			)
+		}else {
+			console.error('tried and failed')		 	 
+		  	//We need to make new data for this font size
 			let clone: TextNode = textNode.clone() //Copy the text outside the instance so we can manipulate it
 	
 			let lH = await getLineHeight(clone)
 			//clone.lineHeight = {value: C, unit: "PIXELS"} // Line Height = Font Size, for easy maths
 			clone.textAutoResize = "WIDTH_AND_HEIGHT" // Make it take up the true line height
-			clone.characters = 'T' //We use the letter T to get an accurate baseline and line height
+
+			let profileTop = 'T'
+			let profileBottom = ''
+			switch(node.getSharedPluginData('TextCrop','top')){
+				case 'ascender':
+					profileTop = 'f'
+					break;
+				case 'capheight':
+					profileTop = 'T'
+					break;
+				case 'xheight':
+					profileTop = 'x'
+					break;
+			}
+			if(node.getSharedPluginData('TextCrop','bottom') == 'descender'){
+				profileBottom = 'y'
+			}
+
+
+			clone.characters = profileTop+profileBottom //We use the letter T to get an accurate baseline and line height
 			clone.x = 0 //Not necessary as such, but cleaner
 			clone.y = 0 //Sets the Y value to 0, so we have a reference point when flattening
 			let H = clone.height
@@ -259,18 +309,16 @@ async function crop(node: InstanceNode, gridSize){
 
 			T.remove() // Delete the clones, clean up our mess as soon as we are done with it
 	  
-			//All of these are percentages
-			//let B =  1 - A - F //Subtract top gap and font size from whole height
-			//let pT = 0.5 - A // Distance from center of text to capheight
-			//let pB = 0.5 - B //Distance from center of text to baseline
-	
 			//Save all of the above to the document, so we don't calculate it twice!  
 			//We store all the previous crop data we do, to save cropping things with the same size.
-			let dataStore = JSON.parse(figma.root.getPluginData(`${JSON.stringify(fontName)}`))
+			let dataStore = JSON.parse(figma.root.getSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`))
 			let data: cropData = {'A':A, 'B':B, 'pT':pT,'pB':pB}
-			dataStore[C][lH] = data
+
+			if(!dataStore[C]){dataStore[C] = {}}
+			if(!dataStore[C][lH]){dataStore[C][lH] = {}}
+			dataStore[C][lH][profileTop+profileBottom] = data
 			
-			figma.root.setPluginData(`${JSON.stringify(fontName)}`, JSON.stringify(dataStore))
+			figma.root.setSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`, JSON.stringify(dataStore))
 	
 			cropNodeWithData(node,data, gridSize)
 		  }
@@ -302,7 +350,7 @@ async function crop(node: InstanceNode, gridSize){
 	console.log('added', A+B+pT+pB)
 	let sizing = textNode.textAutoResize
 	console.log(sizing)
-	console.log(node.getPluginData('multiline'))
+	console.log(node.getSharedPluginData('TextCrop','multiline'))
 	
 	let lineHeight = await getLineHeight(textNode)
 	if(sizing == "HEIGHT"){
@@ -373,7 +421,7 @@ async function updateLegacy(key){
 	//Old versions of text crop, update to the new one
 	var grid = parseFloat(await figma.clientStorage.getAsync('gridSize'))
 	let component = figma.importComponentByKeyAsync(key)
-	let legacies = figma.currentPage.findAll(n => n.type == "INSTANCE" && n.getPluginData('TextCropComponent') == 'true') as InstanceNode[]
+	let legacies = figma.currentPage.findAll(n => n.type == "INSTANCE" && n.getSharedPluginData('TextCrop','TextCropComponent') == 'true') as InstanceNode[]
 	legacies.forEach(async (node:InstanceNode) => {	
 		let instance = (await component).createInstance()	
 		swapNodes(node,instance)
@@ -467,3 +515,10 @@ async function swapNodes(node: TextNode | InstanceNode | FrameNode, instance: In
 function gridRound(number,gridSize){
 	return (Math.ceil(number / gridSize)) * gridSize
 }
+
+figma.on('selectionchange', () => {
+	let sel = figma.currentPage.selection
+	let instances = sel.filter(n => n.getSharedPluginData('TextCrop','multiline') && n.type == "INSTANCE")
+	dispatch('selection', instances.length)
+
+})

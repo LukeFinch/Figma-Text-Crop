@@ -1,5 +1,5 @@
 {
-	"name": "Text Cropadopalous",
+	"name": "Text Crop",
 	"api": "1.0.0",
 	"main": "dist/code.js",
 	"ui": {

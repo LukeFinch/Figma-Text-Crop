@@ -6,12 +6,12 @@
 		"update":"dist/update.html"
 	},
 	"menu": [
-		{"name": "Auto Crop", "command": "UpdateMenu"	},
-		{"name": "Set Grid Size", "command": "ChangeGrid"	},
-		{"separator": true},
-		{"name": "Create Component", "command": "Create"	}
+		{"name": "1. Create Components", "command": "Create"	},
+		{"name": "2. Crop Instances", "command": "UpdateMenu"	},
+		{"separator": true},	
+		{"name": "Set Grid Size", "command": "ChangeGrid"	}
 	]	,
-	"id": "DEV-951930713294228024",
+	"id": "951930713294228024",
 	"relaunchButtons": [
 		{
 			"command": "Update",

@@ -30,7 +30,7 @@ break;
 case 'UpdateMenu':
 async function loadUI(){
 	figma.showUI(__uiFiles__.update, {
-		width: 440,
+		width: 400,
 		height: 300,
 		visible: false
 	})
@@ -98,10 +98,7 @@ loadUI()
 	} doTextSwap();
  break;
  case 'ChangeGrid':
-
-	promptGrid()
-
- 
+	promptGrid() 
  break;
  default:
 	 figma.showUI(__uiFiles__.update)
@@ -217,6 +214,8 @@ async function updateInstances(shouldClose){
 
 //New Crop Methods
 async function crop(node: InstanceNode, gridSize){
+	
+	figma.root.setSharedPluginData('TextCrop','gridSize',gridSize.toString())
 
 	let textNode = (node.children[0] as ContainerNode).children[0] as TextNode
 
@@ -258,14 +257,28 @@ async function crop(node: InstanceNode, gridSize){
 		console.log('Some data exists')
 	  //Object Exists
 		let data = JSON.parse(cropData) as cropData
-		let lH = await getLineHeight(textNode)
-		let nodeCropData = data[textNode.fontSize][lH][profileTop+profileBottom]
-		if(typeof nodeCropData !== 'undefined'){
+		let lH = await getLineHeight(textNode)		
+		//let nodeCropData = data[textNode.fontSize][lH][profileTop+profileBottom]
+		
+		var nodeCropData = function(data){
+			let nodeData = undefined
+			try{
+				nodeData = data[textNode.fontSize][lH][profileTop+profileBottom]
+			}catch(e){
+				nodeData = null
+			}
+			return nodeData
+		}
+		if(nodeCropData(data) !== null && nodeCropData(data) !== undefined){
+			console.log('no cropdata ',nodeCropData(data))
 			cropNodeWithData(
 				node,
-				nodeCropData,
+				nodeCropData(data),
 				gridSize
 			)
+		if(nodeCropData(data) == undefined){
+			console.log('Yo lets do some other shite	')
+		}
 		}else {
 			console.error('tried and failed')		 	 
 		  	//We need to make new data for this font size
@@ -341,6 +354,7 @@ async function crop(node: InstanceNode, gridSize){
 	
 	console.log("cropping",node)
 	console.log(data)
+
 	let A = data.A
 	let B = data.B
 	let pT = data.pT
@@ -388,8 +402,9 @@ async function crop(node: InstanceNode, gridSize){
 	
 	 //TODO: Check the alignment of text in the text box, let users center, top or bottom align
 	 node.paddingTop = paddingTop 
-	 node.paddingBottom = gridSize == 0 ? paddingBottom : (Math.ceil((paddingBottom + paddingTop) / gridSize) * gridSize) - paddingTop
+	 node.paddingBottom = gridSize == 0 ? paddingBottom : gridRound((paddingBottom + paddingTop), gridSize) - paddingTop
 	
+	 
 
 	
 	

@@ -82,12 +82,6 @@ module.exports = (env, argv) => ({
 						inlineSource: '.(js|css|scss)$',
 						chunks: ['update']
 					}),
-					new HtmlWebpackPlugin({
-						template: './src/create.html',
-						filename: 'create.html',
-						inlineSource: '.(js|css|scss)$',
-						chunks: ['create']
-					}),
 					new HtmlWebpackInlineSourcePlugin()
 			  ]
 			: [

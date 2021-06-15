@@ -1,7 +1,8 @@
 <template>
 <div id="ui">
-  <div class="type type--bold p-xxsmall" v-bind:class="{error: !selectionCount}">{{helperText}}</div>
-  
+  <div class="banner"  v-bind:class="{error: !selectionCount, 'success': selectionCount}">
+  <div class="type type--bold type--large p-xxsmall">{{helperText}}</div>
+  </div>
 <div class='svg-container'>
 <svg width="400" height="90" viewBox="0 0 400 90" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M76.9332 22.5489H73.6731C73.514 20.2694 73.143 18.3611 72.5598 16.8237C71.9767 15.2864 71.1286 14.0937 70.0153 13.2455C68.9551 12.3443 67.6033 11.7082 65.96 11.3371C64.3167 10.966 62.3553 10.7805 60.0758 10.7805C58.1144 10.7805 56.5241 10.8335 55.3048 10.9395C54.1386 10.9925 53.2374 11.1251 52.6013 11.3371C51.9651 11.5492 51.541 11.8142 51.329 12.1323C51.17 12.3973 51.0904 12.7684 51.0904 13.2455V55.7867C51.0904 57.4831 51.1965 58.9409 51.4085 60.1601C51.6736 61.3794 52.1507 62.3866 52.8398 63.1817C53.582 63.9239 54.6157 64.507 55.9409 64.9311C57.3192 65.3022 59.1216 65.5142 61.348 65.5672V68.5888H31.2909V65.5672C33.5173 65.5142 35.3197 65.3022 36.698 64.9311C38.0763 64.507 39.11 63.9239 39.7991 63.1817C40.5413 62.3866 41.0184 61.3794 41.2304 60.1601C41.4955 58.9409 41.628 57.4831 41.628 55.7867V13.2455C41.628 12.7684 41.522 12.3973 41.3099 12.1323C41.1509 11.8142 40.7798 11.5492 40.1967 11.3371C39.6666 11.1251 38.898 10.9925 37.8907 10.9395C36.8835 10.8335 35.5318 10.7805 33.8354 10.7805C31.768 10.7805 29.8331 10.86 28.0307 11.0191C26.2814 11.1781 24.7441 11.6552 23.4188 12.4503C22.1465 13.1925 21.1128 14.3587 20.3176 15.9491C19.5225 17.5394 19.0984 19.7393 19.0454 22.5489H16.1033V7.3613H76.1381L76.9332 22.5489Z" fill="black"/>
@@ -51,60 +52,16 @@
     <input type="number" class="input__field" style="text-align: right" name="gridSize" @input="handleGridSize" min="0" v-model="gridSize">
        </div>
   </div>
-  <button class="button button--secondary justify-content-center" :disabled="autoUpdate" @click='updateInstances' >
+  <div class="flex column">
+  <button class="button button--primary justify-content-center" :disabled="autoUpdate" @click='updateInstances' >
     <span>Crop</span></button>
+    </div>
   </div>
 
 
 
 
 
-<!-- <div id="updateButtons">
-   <div class="switch">
-    <input class="switch__toggle" type="checkbox" id="autoSwitch"  v-model="autoUpdate" @change="handleAutoUpdate">
-    <label class="switch__label" for="autoSwitch">poop!</label>
-  </div>
-  <button class="button button--primary flex-grow justify-content-center" :disabled="autoUpdate" @click='updateInstances' ><span v-if="autoUpdate">Cropping</span><span v-else>Crop</span></button>
-  </div> -->
-
-<Disclosure heading="Settings" :section="true" :expanded="false">
-
-   
-    <h2 class="type type--large type--bold mt--medium">Crop to Grid</h2>
-    
-     
-    <div class="input input--with-icon flex row">
-    <div class="icon icon--grid"></div>
-    <input type="number" class="input__field" style="text-align: right" name="gridSize" @input="handleGridSize" min="0" v-model="gridSize">
-    <label class="label">px</label>
-    </div>
-
-    <div class="onboarding-tip__msg">Rounds the size of the frame.<br>Leave at 0 for no rounding</div>
-
-    <h2 class="type type--large type--bold mt--medium">Crop Frequency</h2>
-    
-     
-    <div class="input input--with-icon flex row">
-    <div class="icon icon--timer"></div>
-    <input type="number" class="input__field" style="text-align: right" name="frequency" min="10" max="99999" v-model="updateFrequency">
-    <label class="label">ms</label>
-    </div>
-    <div  class="onboarding-tip__msg">Here you can set how often Auto Crop crops your instances</div>
-    <!-- <section v-if="updateFrequency == 8080" >
-    
-    <h2 class="type type--large type--bold mt--medium">Replace Keys</h2>  
-     
-    <div class="input input--with-icon flex row">
-    <div class="icon icon--key"></div>
-    <input  class="input__field" style="text-align: right" name="componentKey" v-model="componentKey">
- 
-    </div>
-   <button class="button button--primary flex-grow justify-content-center"  @click='updateLegacies' >Replace Old</button>
-    <button class="button button--primary flex-grow justify-content-center"  @click='swapText' >Swap Text Layer</button>
-    <div class="onboarding-tip__msg">This is a secret! replace the component key here</div>
-    </section>   -->
-
-</Disclosure>
   </div>
 </template>
 
@@ -129,7 +86,7 @@ const componentKey = ref('a46bf185241459316d7c3843a39027b19ce27032')
 const selectionCount = ref(0)
 
 const helperText = computed(() => {
-  return selectionCount.value > 0 ? `You have ${selectionCount.value} instances` : `Select one or more instances of Text Crop components`
+  return selectionCount.value > 0 ? `You have ${selectionCount.value} instance${selectionCount.value > 1 ? 's' : ''} selected to crop` : `Select one or more instances of Text Crop components`
 })
 
 
@@ -144,9 +101,9 @@ export default {
     
 
     const topListOptions = ref([
-      {value:"ascender",label:"Ascender"},
+      {value:"ascender",  label:"Ascender"},
       {value:"capheight", label:"Capheight"},
-      {value:"xheight", label:"X-height"}
+      {value:"xheight",   label:"X-height"}
     ])
 
       const bottomListOptions = ref([
@@ -256,7 +213,12 @@ export default {
 <style lang="scss">
 
 .error{
-  color: red;
+  color: var(--red);
+  background-color: var(--red2);
+}
+.success{
+  color: var(--black);
+  background-color: var(--selection-a)
 }
 
 .button--withIcon{
@@ -280,11 +242,13 @@ export default {
 
 .banner{
   width: 100%;
-  padding: var(--size-xxsmall) var(--size-medium);
-  background: var(--black);
+  padding: var(--size-xxsmall);;
   display: flex;
   justify-content: center;
   align-items: center;
+  margin-bottom: 16px;
+  max-height: 48px;
+  user-select: none;
 }
 .fade-enter-active, .fade-leave-active {
   transition: all .2s ease;
@@ -314,42 +278,47 @@ input::-webkit-inner-spin-button { margin-left: var(--size-xxsmall) }
 
 .line{
   stroke-width: 1px;
-  stroke-opacity:0.3;
-  stroke-dasharray: 8 8;
+  stroke-opacity:1;
+  stroke-dasharray: 6 12;
   stroke: black;
+  transform: scaleX(0.95) translate3D(2.5%, 0, 0);
 }
 .line-selected{
   stroke: #7B61FF;
   stroke-width: 2px;
   stroke-opacity:1 !important;
   stroke-dasharray: 0 0 !important;
+  transform: scaleX(1) translate3D(0, 0, 0);
 }
 
 .options-container{
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  padding: 20px 8px;
+  position: fixed;
+  bottom: 0px;
+  display: grid;
+  padding: 12px 24px 16px;
   width: 100%;
-  align-items: flex-end;
-}
-.select-menu__button{
-  min-width: 100px;
-  max-width: 100px;
-  width: 100px !important;
+  grid-template-columns: 1fr 1fr;
+  div.flex.column{
+    width: 100%;
+    align-self: end;
+    justify-self: center;
+    padding: 0px 4px;
+  }
 }
 
-.select-menu__label{
-  width: 100px
+
+.select-menu, .select-menu__button {
+  width: 100%;
 }
 
 .icon{
     background-repeat: no-repeat;
     background-position: center;
 }
-.input-rounding{
-  width: 80px;
+.button--primary {
+  background-color: var(--purple)
 }
+
 
 </style>
 

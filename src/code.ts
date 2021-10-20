@@ -157,10 +157,11 @@ handleEvent('cropProfile', data =>{
 })
 
 async function updateInstances(shouldClose){
-
+	console.log("Updating instances....")
 	let keys = new Set()
 	
 	var grid = parseFloat(await figma.clientStorage.getAsync('gridSize'))
+	console.log('grid',grid)
 	var instances: InstanceNode[];
 	
 
@@ -170,33 +171,51 @@ async function updateInstances(shouldClose){
 	if(figma.currentPage.selectedTextRange && figma.currentPage.selectedTextRange.node.parent.getSharedPluginData('TextCrop','TextCrop') == 'true'){
 		instances = [figma.currentPage.selectedTextRange.node.parent as InstanceNode]
 	} else {
-
 		if(figma.currentPage.selection.length == 0)
 			instances = figma.currentPage.findAll(n => n.type == "INSTANCE" && n.getSharedPluginData('TextCrop','TextCrop') == 'true') as InstanceNode[] //New style
 		}
 		if(figma.currentPage.selection.length > 0){
+			// //instances = figma.currentPage.selection.filter(n => n.type == "INSTANCE" && n.getSharedPluginData('TextCrop','TextCrop') == 'true') as InstanceNode[]
+			// let inst: InstanceNode[] = []
+			// figma.currentPage.selection.filter(node => isContainerNode(node) || node.getSharedPluginData('TextCrop','TextCrop') == 'true').forEach(node => {
+			// 	if(node.getSharedPluginData('TextCrop','TextCrop') == 'true'){
+			// 		inst.push(node as InstanceNode)
+			// 	} else {
+			// 		(node as ContainerNode).findAll(n => n.getSharedPluginData('TextCrop','TextCrop') == 'true').forEach(i => inst.push(i as InstanceNode))
+			// 	}
+			// })
 
 			let inst: InstanceNode[] = []
-			figma.currentPage.selection.filter(node => isContainerNode(node) || node.getSharedPluginData('TextCrop','TextCrop') == 'true').forEach(node => {
-				if(node.getSharedPluginData('TextCrop','TextCrop') == 'true'){
-					inst.push(node as InstanceNode)
+
+			figma.currentPage.selection.forEach(n => {
+				if(n.type == "INSTANCE"){
+					inst.push(n)
 				} else {
-					(node as ContainerNode).findAll(n => n.getSharedPluginData('TextCrop','TextCrop') == 'true').forEach(i => inst.push(i as InstanceNode))
+					if(n.parent.type == "INSTANCE"){
+						inst.push(n.parent)
+					} else {
+						if((n.parent.parent as any).type == "INSTANCE"){
+							inst.push(n.parent.parent as InstanceNode)
+						}
+					}
 				}
 			})
 			instances = inst
+			//instances = figma.currentPage.selection as InstanceNode[]
 		}
 
-		//console.log(instances)
+		console.log(instances)
 
-		let sel = figma.currentPage.selection
-		instances = sel.filter(n => n.getSharedPluginData('TextCrop','multiline') && n.type == "INSTANCE") as InstanceNode[]
-
+		//let sel = figma.currentPage.selection
+		//instances = sel.filter(n => n.getSharedPluginData('TextCrop','multiline') && n.type == "INSTANCE") as InstanceNode[]
+		
 	instances.forEach(instance => {
 		console.log(instance.getSharedPluginData('TextCrop','top'))
 		keys.add(instance.mainComponent.key)	
 		crop(instance, grid)
 	})
+
+
 	waitingClock = false
 	//figma.notify(`Cropped ${instances.length} instances, took ${Date.now() - t0} ms`)
 	if(keys.size > 1){
@@ -528,7 +547,7 @@ async function swapNodes(node: TextNode | InstanceNode | FrameNode, instance: In
 
 
 function gridRound(number,gridSize){
-	return (Math.ceil(number / gridSize)) * gridSize
+	return (Math.round(number / gridSize)) * gridSize
 }
 
 figma.on('selectionchange', () => {

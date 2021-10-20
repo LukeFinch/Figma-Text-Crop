@@ -183,8 +183,8 @@ componentSet.description = ""
 
 
 
-componentAutoWidth.setSharedPluginData('TextCrop','TexCrop','true')
-componentAutoHeight.setSharedPluginData('TextCrop','TexCrop','true')
+componentAutoWidth.setSharedPluginData('TextCrop','TextCrop','true')
+componentAutoHeight.setSharedPluginData('TextCrop','TextCrop','true')
 componentAutoWidth.setSharedPluginData('TextCrop','multiline','false')
 componentAutoHeight.setSharedPluginData('TextCrop','multiline','true')
 

@@ -5,6 +5,7 @@
 	"ui": {
 		"update":"dist/update.html"
 	},
+	"editorType": ["figma"],
 	"menu": [
 		{"name": "1. Create Components", "command": "Create"	},
 		{"name": "2. Crop Instances", "command": "UpdateMenu"	},

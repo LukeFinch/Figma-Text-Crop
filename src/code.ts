@@ -1,10 +1,15 @@
+import { dispatch, handleEvent } from './codeMessageHandler';
+import makeCropComponent from './makeCropComponent'
+import loadUniqueFonts from "./fontUtils"
+
+
+
+
 
 //Make it always show the relaunch button
 figma.root.setRelaunchData({'Update':'Launch the text crop plugin to resize text crop components'})
 
-import { notDeepEqual } from 'assert';
-import { dispatch, handleEvent } from './codeMessageHandler';
-import makeCropComponent from './makeCropComponent'
+
 
 type ContainerNode = BaseNode & ChildrenMixin;
 const isContainerNode = (n :BaseNode) :n is ContainerNode => !!(n as any).children
@@ -171,8 +176,6 @@ async function updateInstances(shouldClose){
 	console.log('grid',grid)
 	var instances: InstanceNode[];
 	
-
-	
 	waitingClock = true;
 
 	if(figma.currentPage.selectedTextRange && figma.currentPage.selectedTextRange.node.parent.getSharedPluginData('TextCrop','TextCrop') == 'true'){
@@ -182,15 +185,7 @@ async function updateInstances(shouldClose){
 			instances = figma.currentPage.findAll(n => n.type == "INSTANCE" && n.getSharedPluginData('TextCrop','TextCrop') == 'true') as InstanceNode[] //New style
 		}
 		if(figma.currentPage.selection.length > 0){
-			// //instances = figma.currentPage.selection.filter(n => n.type == "INSTANCE" && n.getSharedPluginData('TextCrop','TextCrop') == 'true') as InstanceNode[]
-			// let inst: InstanceNode[] = []
-			// figma.currentPage.selection.filter(node => isContainerNode(node) || node.getSharedPluginData('TextCrop','TextCrop') == 'true').forEach(node => {
-			// 	if(node.getSharedPluginData('TextCrop','TextCrop') == 'true'){
-			// 		inst.push(node as InstanceNode)
-			// 	} else {
-			// 		(node as ContainerNode).findAll(n => n.getSharedPluginData('TextCrop','TextCrop') == 'true').forEach(i => inst.push(i as InstanceNode))
-			// 	}
-			// })
+
 
 			let inst: InstanceNode[] = []
 
@@ -208,18 +203,15 @@ async function updateInstances(shouldClose){
 				}
 			})
 			instances = inst
-			//instances = figma.currentPage.selection as InstanceNode[]
+
 		}
 
 		console.log(instances)
-
-		//let sel = figma.currentPage.selection
-		//instances = sel.filter(n => n.getSharedPluginData('TextCrop','multiline') && n.type == "INSTANCE") as InstanceNode[]
 		
-	instances.forEach(instance => {
+	const croppableInstances = instances.map(instance => {
 		console.log(instance.getSharedPluginData('TextCrop','top'))
 		keys.add(instance.mainComponent.key)	
-		crop(instance, grid)
+		return crop(instance, grid)
 	})
 
 
@@ -230,9 +222,12 @@ async function updateInstances(shouldClose){
 	}
 	figma.clientStorage.setAsync('componentKey', keys[0])
 
-	if(shouldClose){
-		figma.closePlugin()
-	}
+	Promise.all(croppableInstances).then(_ => {
+
+		if(shouldClose){
+			figma.closePlugin()
+		}
+	})
 
 }
 
@@ -246,7 +241,8 @@ async function crop(node: InstanceNode, gridSize){
 	let textNode = (node.children[0] as ContainerNode).children[0] as TextNode
 
 	let fontName = textNode.getRangeFontName(0,1) as FontName
-	await figma.loadFontAsync(fontName)
+	//await figma.loadFontAsync(fontName)
+	await loadUniqueFonts([textNode])
 	
 	let cropData = figma.root.getSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`)
 
@@ -311,6 +307,7 @@ async function crop(node: InstanceNode, gridSize){
 			let clone: TextNode = textNode.clone() //Copy the text outside the instance so we can manipulate it
 	
 			let lH = await getLineHeight(clone)
+			await loadUniqueFonts([clone])
 			//clone.lineHeight = {value: C, unit: "PIXELS"} // Line Height = Font Size, for easy maths
 			clone.textAutoResize = "WIDTH_AND_HEIGHT" // Make it take up the true line height
 
@@ -448,7 +445,8 @@ async function crop(node: InstanceNode, gridSize){
 		}
 			if(lineHeight.unit == "AUTO"){
 				let c = node.clone()
-				await figma.loadFontAsync(node.getRangeFontName(0,1) as FontName)
+				await loadUniqueFonts([c])
+				//await figma.loadFontAsync(node.getRangeFontName(0,1) as FontName)
 				c.characters = 'T'
 				c.textAutoResize = "WIDTH_AND_HEIGHT"
 				L = c.height
@@ -496,13 +494,16 @@ async function swapNodes(node: TextNode | InstanceNode | FrameNode, instance: In
 		instance.relativeTransform = node.relativeTransform;
 		instance.resize(node.width,node.height);
 		let newText = instance.children[0] as TextNode
-		await figma.loadFontAsync(newText.fontName as FontName)
+		await loadUniqueFonts([newText])
+		//await figma.loadFontAsync(newText.fontName as FontName)
 		newText.characters = oldText.characters
 
 		let styleId = oldText.textStyleId
 		if (styleId == ''){
-			let fontName = oldText.getRangeFontName(0,oldText.characters.length) as FontName
-			await figma.loadFontAsync(fontName).then( res => {
+			// let fontName = oldText.getRangeFontName(0,oldText.characters.length) as FontName
+			// await figma.loadFontAsync(fontName)
+			
+			loadUniqueFonts([oldText]).then( res => {
 				if(oldText.getRangeTextStyleId(0,oldText.characters.length) != ''){
 					newText.setRangeTextStyleId(0,oldText.characters.length,(oldText.getRangeTextStyleId(0,oldText.characters.length) as string))
 				} else {
@@ -522,8 +523,9 @@ async function swapNodes(node: TextNode | InstanceNode | FrameNode, instance: In
 		}
 		if(typeof styleId == "symbol"){
 			for(var i = 0; i < oldText.characters.length; i++){
-			let fontName = oldText.getRangeFontName(i,i+1) as FontName
-			await figma.loadFontAsync(fontName).then( res => {
+			// let fontName = oldText.getRangeFontName(i,i+1) as FontName
+			// await figma.loadFontAsync(fontName)
+			loadUniqueFonts([oldText]).then( res => {
 				if(oldText.getRangeTextStyleId(i,i+1) != ''){
 					newText.setRangeTextStyleId(i,i+1,(oldText.getRangeTextStyleId(i,i+1) as string))
 				} else {

@@ -120,6 +120,8 @@ export default {
 
   onMounted(() => {
 
+      dispatch('ready')
+
       selectMenu.init()
 
           const resizeObserver = new ResizeObserver(function () {

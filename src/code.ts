@@ -38,8 +38,15 @@ async function loadUI(){
 	let key = await figma.clientStorage.getAsync('componentKey')
 	dispatch('gridSize',grid)
 	dispatch('componentKey',key)
+	let sel = figma.currentPage.selection
+	let instances = sel.filter(n => n.getSharedPluginData('TextCrop','multiline') && n.type == "INSTANCE")
+	
 	console.log('showing the ui now...',grid,key)
-	figma.ui.show()
+	handleEvent('ready', () => {
+		dispatch('selection', instances.length)
+		figma.ui.show()
+
+	})
 }
 loadUI()
  break;

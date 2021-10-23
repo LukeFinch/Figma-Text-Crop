@@ -42,16 +42,14 @@ async function loadUI(){
 	let grid = await figma.clientStorage.getAsync('gridSize')
 	let key = await figma.clientStorage.getAsync('componentKey')
 	dispatch('gridSize',grid)
-	dispatch('componentKey',key)
+	if(key){dispatch('componentKey',key)}
+	
 	let sel = figma.currentPage.selection
 	let instances = sel.filter(n => n.getSharedPluginData('TextCrop','multiline') && n.type == "INSTANCE")
 	
 	console.log('showing the ui now...',grid,key)
-	handleEvent('ready', () => {
-		dispatch('selection', instances.length)
-		figma.ui.show()
 
-	})
+	figma.ui.show()
 }
 loadUI()
  break;
@@ -115,6 +113,12 @@ loadUI()
  default:
 	 figma.showUI(__uiFiles__.update)
 }
+
+handleEvent('ready', () => {
+	let sel = figma.currentPage.selection
+	let instances = sel.filter(n => n.getSharedPluginData('TextCrop','multiline') && n.type == "INSTANCE")
+	dispatch('selection', instances.length)
+})
 
 let waitingClock = false //Boolean to handle the clock, if the clock is faster than the script..
 

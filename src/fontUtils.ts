@@ -17,7 +17,7 @@ export function getAllFonts(textNodes: Array<TextNode>) {
 			pushUnique(node.fontName as FontName)
 		}
 	}
-
+	
 	return fonts
 }
 

@@ -3,7 +3,7 @@ import makeCropComponent from './makeCropComponent'
 import loadUniqueFonts from "./fontUtils"
 
 
-
+let toast: NotificationHandler;
 
 
 //Make it always show the relaunch button
@@ -14,9 +14,9 @@ figma.root.setRelaunchData({'Update':'Launch the text crop plugin to resize text
 type ContainerNode = BaseNode & ChildrenMixin;
 const isContainerNode = (n :BaseNode) :n is ContainerNode => !!(n as any).children
 import {prompt} from './prompt'
+import { toDisplayString } from '@vue/shared';
 
 var documentName = (node: any) => node.type == "DOCUMENT" ? node.name : documentName(node.parent)
-console.log(figma.command)
 switch (figma.command) {
  case 'Create':
 	 makeCropComponent()
@@ -165,19 +165,23 @@ handleEvent('swapText', key => {
 handleEvent('cropProfile', data =>{
 	console.log('crop profile',data)
 	let sel = figma.currentPage.selection
-	let instances = sel.filter(n => n.getSharedPluginData('TextCrop','multiline') && n.type == "INSTANCE")
+	let instances = sel.filter(n => n.getSharedPluginData('TextCrop','TextCrop') && n.type == "INSTANCE")
+	console.log('crop profile',instances.length)
 	instances.forEach(instance => {
 		instance.setSharedPluginData('TextCrop','top',data.top)
 		instance.setSharedPluginData('TextCrop','bottom',data.bottom)
 	})
 })
 
+
+
 async function updateInstances(shouldClose){
 	console.log("Updating instances....")
+	const t0 = Date.now()
 	let keys = new Set()
 	
 	var grid = parseFloat(await figma.clientStorage.getAsync('gridSize'))
-	console.log('grid',grid)
+	
 	var instances: InstanceNode[];
 	
 	waitingClock = true;
@@ -212,24 +216,25 @@ async function updateInstances(shouldClose){
 
 		console.log(instances)
 		
-	const croppableInstances = instances.map(instance => {
-		console.log(instance.getSharedPluginData('TextCrop','top'))
-		keys.add(instance.mainComponent.key)	
+
+		const croppableInstances = instances.map(instance => {
+		keys.add(instance.mainComponent.key)
 		return crop(instance, grid)
+		
 	})
 
 
 	waitingClock = false
-	//figma.notify(`Cropped ${instances.length} instances, took ${Date.now() - t0} ms`)
+
 	if(keys.size > 1){
 		console.log("There's more than one component, its probably a bad idea right??")
 	}
 	figma.clientStorage.setAsync('componentKey', keys[0])
 
 	Promise.all(croppableInstances).then(_ => {
-
+		console.log('ALL DONE')
 		if(shouldClose){
-			figma.closePlugin()
+			figma.closePlugin(`Cropped ${instances.length} instances, took ${Date.now() - t0} ms`)
 		}
 	})
 
@@ -239,29 +244,11 @@ async function updateInstances(shouldClose){
 
 //New Crop Methods
 async function crop(node: InstanceNode, gridSize){
-	
 	figma.root.setSharedPluginData('TextCrop','gridSize',gridSize.toString())
-
 	let textNode = (node.children[0] as ContainerNode).children[0] as TextNode
-
 	let fontName = textNode.getRangeFontName(0,1) as FontName
-	//await figma.loadFontAsync(fontName)
 	await loadUniqueFonts([textNode])
-	
-	let cropData = figma.root.getSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`)
-
-	if(cropData == ''){
-	  console.log('No data exists')
-	  //No data at all	
-	  let dataStore = {}	  
-	  figma.root.setSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`, JSON.stringify(dataStore))
-	  cropData = "{}"
-	}
-	
-	// textNode.textAutoResize = "HEIGHT"
-	// let textHeight = textNode.height
-	// textNode.textAutoResize = "NONE"
-	
+	//Get Crop Profiles
 	let profileTop = ''
 	let profileBottom = ''
 	switch(node.getSharedPluginData('TextCrop','top')){
@@ -274,20 +261,36 @@ async function crop(node: InstanceNode, gridSize){
 		case 'xheight':
 			profileTop = 'x'
 			break;
+		default:
+			profileTop = 'T'
+			break;
 	}
 	if(node.getSharedPluginData('TextCrop','bottom') == 'descender'){
 		profileBottom = 'y'
 	}
+	
+	let cropData = figma.root.getSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`)
+
+	if(cropData === ''){
+	  console.log('No data exists')
+	  //No data at all- lets initialise some
+	  let dataStore = {}	  
+	  figma.root.setSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`, JSON.stringify(dataStore))
+	  cropData = "{}"
+	}
+
+
+	
 
 	if(cropData !== ''){
-		console.log('Some data exists')
-	  //Object Exists
+
+	  	//Object Exists
 		let data = JSON.parse(cropData) as cropData
+
 		let lH = await getLineHeight(textNode)		
-		//let nodeCropData = data[textNode.fontSize][lH][profileTop+profileBottom]
 		
 		var nodeCropData = function(data){
-			let nodeData = undefined
+			let nodeData = null
 			try{
 				nodeData = data[textNode.fontSize][lH][profileTop+profileBottom]
 			}catch(e){
@@ -295,79 +298,134 @@ async function crop(node: InstanceNode, gridSize){
 			}
 			return nodeData
 		}
-		if(nodeCropData(data) !== null && nodeCropData(data) !== undefined){
-			console.log('no cropdata ',nodeCropData(data))
-			cropNodeWithData(
-				node,
-				nodeCropData(data),
-				gridSize
-			)
-		if(nodeCropData(data) == undefined){
-			console.log('Yo lets do some other shite	')
-		}
-		}else {
-			console.error('tried and failed')		 	 
-		  	//We need to make new data for this font size
-			let clone: TextNode = textNode.clone() //Copy the text outside the instance so we can manipulate it
-	
-			let lH = await getLineHeight(clone)
-			await loadUniqueFonts([clone])
-			//clone.lineHeight = {value: C, unit: "PIXELS"} // Line Height = Font Size, for easy maths
-			clone.textAutoResize = "WIDTH_AND_HEIGHT" // Make it take up the true line height
 
-			let profileTop = 'T'
-			let profileBottom = ''
-			switch(node.getSharedPluginData('TextCrop','top')){
-				case 'ascender':
-					profileTop = 'f'
-					break;
-				case 'capheight':
-					profileTop = 'T'
-					break;
-				case 'xheight':
-					profileTop = 'x'
-					break;
-			}
-			if(node.getSharedPluginData('TextCrop','bottom') == 'descender'){
-				profileBottom = 'y'
-			}
+		let nodeData = nodeCropData(data)
+		if(nodeData){
 
+			cropNodeWithData(node,nodeData,gridSize, lH)
+		} else{
+			//We don't have data for this config
+			//Initalise the objects to store the data			
+			!!data[textNode.fontSize] ? null : data[textNode.fontSize] = {}
+			!!data[textNode.fontSize][lH] ? null : data[textNode.fontSize][lH] = {}
+			!!data[textNode.fontSize][lH][profileTop+profileBottom] ? null : {}
 
-			clone.characters = profileTop+profileBottom //We use the letter T to get an accurate baseline and line height
+			//Copy the text outside the instance so we can manipulate it
+			
+			const clone = textNode.clone()
+			figma.viewport.scrollAndZoomIntoView([clone])
+
+			figma.currentPage.insertChild(0,clone)
+			clone.name = "Text Crop Clone"
+			clone.visible = true
+			clone.opacity = 0 //Hide the layer - doesn't work if invisible
 			clone.x = 0 //Not necessary as such, but cleaner
 			clone.y = 0 //Sets the Y value to 0, so we have a reference point when flattening
+			await loadUniqueFonts([clone])
+			clone.textAutoResize = "WIDTH_AND_HEIGHT" // Make it take up the true line height
+
+			//We know the top and bototm config
+
+			clone.characters = profileTop+profileBottom //We use the letter T to get an accurate baseline and line height
+
 			let H = clone.height
 			let C = clone.fontSize
-			let T = figma.flatten([clone]) //Outline the text to make readings from it
-	
-			//let F = T.height / C //The font size as a %
-			//let A  = T.y /C //The top gap - because we set Y to 0 at clone.y this y offset is the capHeight
-			let A = T.y
-			let B = H - T.y - T.height
-			let pT = H/2 - A
-			let pB = H/2 - B
 
-			T.remove() // Delete the clones, clean up our mess as soon as we are done with it
-	  
-			//Save all of the above to the document, so we don't calculate it twice!  
-			//We store all the previous crop data we do, to save cropping things with the same size.
-			let dataStore = JSON.parse(figma.root.getSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`))
-			let data: cropData = {'A':A, 'B':B, 'pT':pT,'pB':pB}
-
-			if(!dataStore[C]){dataStore[C] = {}}
-			if(!dataStore[C][lH]){dataStore[C][lH] = {}}
-			dataStore[C][lH][profileTop+profileBottom] = data
+				let T = figma.flatten([clone])	
 			
-			figma.root.setSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`, JSON.stringify(dataStore))
+				let A = T?.y
+				let B = H - T?.y - T?.height
+				let pT = H/2 - A
+				let pB = H/2 - B
 	
-			cropNodeWithData(node,data, gridSize)
+				T.remove() // Delete the clones, clean up our mess as soon as we are done with it
+				let cropData: cropData;
+				T ? cropData = {'A':A, 'B':B, 'pT':pT,'pB':pB} : null;
+				data[textNode.fontSize][lH][profileTop+profileBottom] = cropData
+	
+				figma.root.setSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`, JSON.stringify(data))
+				return cropNodeWithData(node,cropData,gridSize, lH)
+			
+
+		}
+
+		// if(nodeCropData(data) !== null && nodeCropData(data) !== undefined){
+		// 	console.log('no cropdata ',nodeCropData(data))
+		// 	cropNodeWithData(
+		// 		node,
+		// 		nodeCropData(data),
+		// 		gridSize
+		// 	)
+	
+		// }
+	} else {
+			// console.warn('Making new data')		 	 
+		  	// //We need to make new data for this font size
+			// let clone: TextNode = textNode.clone() //Copy the text outside the instance so we can manipulate it
+			// clone.visible = false //Hide the layer
+			// let lH = await getLineHeight(clone)
+			// await loadUniqueFonts([clone])
+			// //clone.lineHeight = {value: C, unit: "PIXELS"} // Line Height = Font Size, for easy maths
+			// clone.textAutoResize = "WIDTH_AND_HEIGHT" // Make it take up the true line height
+
+			
+
+
+			// //Change the character string depending on the crop config
+			// let profileTop = 'T'
+			// let profileBottom = ''
+			// switch(node.getSharedPluginData('TextCrop','top')){
+			// 	case 'ascender':
+			// 		profileTop = 'f'
+			// 		break;
+			// 	case 'capheight':
+			// 		profileTop = 'T'
+			// 		break;
+			// 	case 'xheight':
+			// 		profileTop = 'x'
+			// 		break;
+			// }
+			// if(node.getSharedPluginData('TextCrop','bottom') == 'descender'){
+			// 	profileBottom = 'y'
+			// }
+
+
+			// clone.characters = profileTop+profileBottom //We use the letter T to get an accurate baseline and line height
+			// clone.x = 0 //Not necessary as such, but cleaner
+			// clone.y = 0 //Sets the Y value to 0, so we have a reference point when flattening
+			// let H = clone.height
+			// let C = clone.fontSize
+			// let T = figma.flatten([clone]) //Outline the text to make readings from it
+	
+			// //let F = T.height / C //The font size as a %
+			// //let A  = T.y /C //The top gap - because we set Y to 0 at clone.y this y offset is the capHeight
+			// let A = T.y
+			// let B = H - T.y - T.height
+			// let pT = H/2 - A
+			// let pB = H/2 - B
+
+			// T.remove() // Delete the clones, clean up our mess as soon as we are done with it
+	  
+			// //Save all of the above to the document, so we don't calculate it twice!  
+			// //We store all the previous crop data we do, to save cropping things with the same size.
+			// let dataStore = JSON.parse(figma.root.getSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`))
+			// let data: cropData = {'A':A, 'B':B, 'pT':pT,'pB':pB}
+
+			// if(!dataStore[C]){dataStore[C] = {}}
+			// if(!dataStore[C][lH]){dataStore[C][lH] = {}}
+			// dataStore[C][lH][profileTop+profileBottom] = data
+			
+			// figma.root.setSharedPluginData('TextCrop',`${JSON.stringify(fontName)}`, JSON.stringify(dataStore))
+	
+			
+			// return cropNodeWithData(node,data, gridSize)
+
 		  }
 	
+		  
 	
 	
-	} else {
-		//oops
-	}
+	
 	
 				
 	}
@@ -377,10 +435,8 @@ async function crop(node: InstanceNode, gridSize){
 	   'A':number, 'B':number, 'pT':number,'pB':number
 	}
 	
-	async function cropNodeWithData(node: InstanceNode, data: cropData, gridSize: number){
-	
-	console.log("cropping",node)
-	console.log(data)
+	async function cropNodeWithData(node: InstanceNode, data: cropData, gridSize: number, lineHeight?: number,){
+
 
 	let A = data.A
 	let B = data.B
@@ -388,12 +444,11 @@ async function crop(node: InstanceNode, gridSize){
 	let pB = data.pB
 	let n: number //number of lines
 	let textNode = (node.children[0] as ContainerNode).children[0] as TextNode
-	console.log('added', A+B+pT+pB)
-	let sizing = textNode.textAutoResize
-	console.log(sizing)
-	console.log(node.getSharedPluginData('TextCrop','multiline'))
 	
-	let lineHeight = await getLineHeight(textNode)
+	let sizing = textNode.textAutoResize
+
+	
+	lineHeight? lineHeight = lineHeight : lineHeight = await getLineHeight(textNode)
 	if(sizing == "HEIGHT"){
 		//Only need if multiline ? 
 		//This method gets the actual height of the text
@@ -424,7 +479,6 @@ async function crop(node: InstanceNode, gridSize){
 	 let paddingBottom = (Math.ceil(n/2)*pB) + (Math.floor(n/2)*pT) + (Math.floor(n/2)*A) + ((Math.ceil(n/2) - 1)*B) + (((n-1) * halfLeading))
 	
 
-	console.log(paddingTop,paddingBottom)
 
 	
 	 //TODO: Check the alignment of text in the text box, let users center, top or bottom align
@@ -437,7 +491,7 @@ async function crop(node: InstanceNode, gridSize){
 	
 	}
 	
-	async function getLineHeight(node: TextNode){
+async function getLineHeight(node: TextNode){
 		let lineHeight = node.getRangeLineHeight(0,1)
 		let L
 		if(typeof lineHeight == "object"){
@@ -458,7 +512,7 @@ async function crop(node: InstanceNode, gridSize){
 			}		
 		}
 		return L
-	}
+}
 
 async function updateLegacy(key){
 	//Old versions of text crop, update to the new one
@@ -566,6 +620,7 @@ function gridRound(number,gridSize){
 figma.on('selectionchange', () => {
 	let sel = figma.currentPage.selection
 	let instances = sel.filter(n => n.getSharedPluginData('TextCrop','multiline') && n.type == "INSTANCE")
+	if(figma.ui){
 	dispatch('selection', instances.length)
-
+	}
 })

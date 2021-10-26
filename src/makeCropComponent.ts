@@ -94,8 +94,12 @@ componentAutoHeight.primaryAxisSizingMode = "FIXED"
 componentAutoHeight.description = ""
 
 // Create FRAME
+
+
+
+
 var cropFrame = figma.createFrame()
-cropFrame.resizeWithoutConstraints(52.0000000000, 0.01)
+zeroResize(cropFrame,52,1/Number.MAX_SAFE_INTEGER)
 cropFrame.name = "Crop"
 cropFrame.relativeTransform = [[1,0,0],[0,1,4.5299987793]]
 cropFrame.y = 4.529998779296875

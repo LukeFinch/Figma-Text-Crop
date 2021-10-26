@@ -4,8 +4,8 @@
 	"main": "index.js",
 	"license": "MIT",
 	"scripts": {
-		"dev": "webpack --mode=development --watch",
-		"build": "webpack --mode=production",
+		"dev": "NODE_OPTIONS=--openssl-legacy-provider webpack --mode=development --watch",
+		"build": "NODE_OPTIONS=--openssl-legacy-provider webpack --mode=production",
 		"preview": "live-server --entry-file='livepreview.html'"
 	},
 	"dependencies": {

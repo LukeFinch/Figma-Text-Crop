@@ -1,17 +1,27 @@
-import { dispatch, handleEvent } from './codeMessageHandler';
-import makeCropComponent from './makeCropComponent'
-import loadUniqueFonts from "./fontUtils"
+
+
+
+import { dispatch, handleEvent } from "./codeMessageHandler";
+import makeCropComponent from "./makeCropComponent";
+import loadUniqueFonts from "./fontUtils";
+import { onlyUnique } from "./util";
+
+//Make it always show the relaunch button
+figma.root.setRelaunchData({
+  Update: "Launch the text crop plugin to resize text crop components",
+});
+
+
+let newDataCount = 0;
 
 
 type ContainerNode = BaseNode & ChildrenMixin;
-
-//Make it always show the relaunch button
-figma.root.setRelaunchData({'Update':'Launch the text crop plugin to resize text crop components'})
-
-let newDataCount = 0;
+const isContainerNode = (n: BaseNode): n is ContainerNode =>
+  !!(n as any).children;
 import { prompt } from "./prompt";
 
-var documentName = (node: any) => node.type == "DOCUMENT" ? node.name : documentName(node.parent)
+var documentName = (node: any) =>
+  node.type == "DOCUMENT" ? node.name : documentName(node.parent);
 switch (figma.command) {
   case "Create":
     makeCropComponent();
@@ -24,7 +34,7 @@ switch (figma.command) {
   case "Update":
     async function handleUpdate() {
       await updateInstances(true);
-    }
+    } 
     handleUpdate();
     break;
   case "UpdateMenu":
@@ -77,33 +87,15 @@ async function promptGrid() {
   }
 }
 
-
 handleEvent("resizeUI", (size) => {
-	figma.ui.resize(size[0],size[1])
-})
+  figma.ui.resize(size[0], size[1]);
+});
 
-handleEvent('gridSize', size => {
-	figma.clientStorage.setAsync('gridSize', size.toString())
-})
-
-handleEvent('createNode', _ => {
-makeCropComponent()
+handleEvent("gridSize", (size) => {
+  figma.clientStorage.setAsync("gridSize", size);
 });
 
 
-handleEvent("cropProfile", (data) => {
-
-  let sel = figma.currentPage.selection;
-  let instances = sel.filter(
-    (n) =>
-      (n.getSharedPluginData("TextCrop", "TextCrop") && n.type == "INSTANCE") ||
-      n.parent.parent.getSharedPluginData("TextCrop", "TextCrop")
-  );
-  instances.forEach((instance) => {
-    instance.setSharedPluginData("TextCrop", "top", data.top);
-    instance.setSharedPluginData("TextCrop", "bottom", data.bottom);
-  });
-});
 
 
 
@@ -259,6 +251,8 @@ async function cropNodeWithData(
   let n: number; //number of lines
   let textNode = (node.children[0] as ContainerNode).children[0] as TextNode;
 
+  //pT - topHeight from middle
+  //pB - bottomHeight from middle
 
 }
 
@@ -296,40 +290,6 @@ async function getGridSize() {
   }
 }
 
-// async function updateInstances(shouldClose){
-// 	console.log("Updating instances....")
-// 	const t0 = Date.now()
-// 	let keys = new Set()
-	
-// 	var grid = parseFloat(await figma.clientStorage.getAsync('gridSize'))
-	
-// 	var instances: InstanceNode[];
-	
-// 	waitingClock = true;
-
-//   lineHeight
-//     ? (lineHeight = lineHeight)
-//     : (lineHeight = await getLineHeight(textNode));
-//   if (sizing == "HEIGHT") {
-//     //This method gets the actual height of the text
-//     textNode.textAutoResize = "HEIGHT";
-//     let textHeight = textNode.height; //Actual Height of the text
-//     textNode.textAutoResize = sizing; //"NONE"
-//     n = Math.ceil(textHeight / lineHeight); // Number of lines. Should always be a whole number...
-//   } else {
-//     n = 1;
-//   }
-
-//   let paddingTop = pT + ((n - 1) / 2) * lineHeight;
-//   let paddingBottom = pB + ((n - 1) / 2) * lineHeight;
-
-//   //TODO: Check the alignment of text in the text box, let users center, top or bottom align
-//   node.paddingTop = paddingTop;
-//   node.paddingBottom =
-//     gridSize == 0
-//       ? paddingBottom
-//       : gridRound(paddingBottom + paddingTop, gridSize) - paddingTop;
-// }
 
 
 async function updateInstances(shouldClose) {

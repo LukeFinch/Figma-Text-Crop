@@ -1,24 +1,26 @@
 import { dispatch, handleEvent } from "./codeMessageHandler";
 import makeCropComponent from "./makeCropComponent";
-import loadUniqueFonts from "./fontUtils";
-import { onlyUnique } from "./util";
-
+import {loadUniqueFonts, getLineHeight} from "./fontUtils";
+import { onlyUnique, addProps } from "./util";
 //Make it always show the relaunch button
 figma.root.setRelaunchData({
   Update: "Launch the text crop plugin to resize text crop components",
 });
 
+
+
 let newDataCount = 0;
 
 type ContainerNode = BaseNode & ChildrenMixin;
-const isContainerNode = (n: BaseNode): n is ContainerNode =>
-  !!(n as any).children;
+
 import { prompt } from "./prompt";
 
 var documentName = (node: any) =>
   node.type == "DOCUMENT" ? node.name : documentName(node.parent);
+
 switch (figma.command) {
   case "Create":
+    figma.notify('Making components...')
     makeCropComponent();
     figma.closePlugin();
     //  figma.showUI(__uiFiles__.create, {
@@ -27,6 +29,7 @@ switch (figma.command) {
     //  })
     break;
   case "Update":
+    figma.notify('Cropping page - this may take a few seconds')
     async function handleUpdate() {
       await updateInstances(true);
     }
@@ -50,6 +53,7 @@ switch (figma.command) {
     loadUI();
     break;
   case "UpdateSelected":
+    figma.notify('Cropping...')
     updateInstances(true);
     break;
   case "ChangeGrid":
@@ -69,14 +73,12 @@ handleEvent("ready", () => {
 });
 
 handleEvent("updateInstances", async (data) => {
-  if (data == "clock" && waitingClock == false) {
+  if (data == "clock") {
     updateInstances(false);
   } else {
     updateInstances(false);
   }
 });
-
-let waitingClock = false; //Boolean to handle the clock, if the clock is faster than the script..
 
 async function promptGrid() {
   let value = await prompt(
@@ -92,14 +94,6 @@ async function promptGrid() {
     figma.closePlugin();
   }
 }
-
-handleEvent("resizeUI", (size) => {
-  figma.ui.resize(size[0], size[1]);
-});
-
-handleEvent("gridSize", (size) => {
-  figma.clientStorage.setAsync("gridSize", size);
-});
 
 async function crop(node: InstanceNode, gridSize) {
   let textNode = (node.children[0] as ContainerNode).children[0] as TextNode;
@@ -146,15 +140,12 @@ async function crop(node: InstanceNode, gridSize) {
       }
       return nodeData;
     };
-    
 
     let nodeData = nodeCropData(data);
-    console.log(nodeData)
+
     if (nodeData) {
       cropNodeWithData(node, nodeData, gridSize, lH);
     } else {
-      console.log("Anomalous node", data);
-
       newDataCount++;
       //We don't have data for this config
       //Initalise the objects to store the data
@@ -191,7 +182,7 @@ async function crop(node: InstanceNode, gridSize) {
       let pT = H / 2 - T.y;
       let pB = T.height - pT;
 
-      //T.remove(); // Delete the clones, clean up our mess as soon as we are done with it
+      T.remove(); // Delete the clones, clean up our mess as soon as we are done with it
       let cropData: cropData;
       T ? (cropData = { pT: pT, pB: pB }) : null;
       data[JSON.stringify(textNode.fontName)][textNode.fontSize][
@@ -220,30 +211,6 @@ interface cropData {
   pT: number;
   pB: number;
 }
-handleEvent("cropProfile", (data) => {
-  console.log("crop profile", data);
-  let sel = figma.currentPage.selection;
-  let instances = sel.filter(
-    (n) => n.getSharedPluginData("TextCrop", "TextCrop") && n.type == "INSTANCE"
-  );
-  console.log("crop profile", instances.length);
-  instances.forEach((instance) => {
-    instance.setSharedPluginData("TextCrop", "top", data.top);
-    instance.setSharedPluginData("TextCrop", "bottom", data.bottom);
-  });
-});
-
-figma.on("selectionchange", () => {
-  //Update the count in the UI
-  let sel = figma.currentPage.selection;
-  let instances = sel.filter(
-    (n) =>
-      n.getSharedPluginData("TextCrop", "multiline") && n.type == "INSTANCE"
-  );
-  if (figma.ui) {
-    dispatch("selection", instances.length);
-  }
-});
 
 async function cropNodeWithData(
   node: InstanceNode,
@@ -275,15 +242,13 @@ async function cropNodeWithData(
     n = 1;
   }
 
-  let fontSize = textNode.getRangeFontSize(0, 1) as number; 
+  let fontSize = textNode.getRangeFontSize(0, 1) as number;
 
   //  //the extra height we add for multiple lines
   let halfLeading = (lineHeight / fontSize - 1) / 2;
 
-
-
-  let paddingTop = pT + (((n-1)/2)*lineHeight)
-  let paddingBottom = pB + (((n-1)/2)*lineHeight)
+  let paddingTop = pT + ((n - 1) / 2) * lineHeight;
+  let paddingBottom = pB + ((n - 1) / 2) * lineHeight;
 
   //TODO: Check the alignment of text in the text box, let users center, top or bottom align
   node.paddingTop = paddingTop;
@@ -291,14 +256,11 @@ async function cropNodeWithData(
     gridSize == 0
       ? paddingBottom
       : gridRound(paddingBottom + paddingTop, gridSize) - paddingTop;
-
-
 }
 
 function gridRound(number, gridSize) {
   return Math.round(number / gridSize) * gridSize;
 }
-
 
 async function getGridSize() {
   let gs = await figma.clientStorage.getAsync("gridSize");
@@ -322,10 +284,9 @@ async function updateInstances(shouldClose) {
   var grid = await getGridSize();
 
   var instances: InstanceNode[];
+  var newInstances: InstanceNode[]; //When we search page for instances not in storage
 
-  waitingClock = true;
-
-  //Update the text we're editing
+  //User is editing a text node
   if (
     figma.currentPage.selectedTextRange &&
     figma.currentPage.selectedTextRange.node.parent.getSharedPluginData(
@@ -339,140 +300,160 @@ async function updateInstances(shouldClose) {
   } else {
     //User clicked update page
     if (figma.command == "Update") {
+
+
+      //Stored IDs
+      let ids = JSON.parse(
+        figma.currentPage.getSharedPluginData("TextCrop", "nodeIds")
+      );
       instances = [
+        ...ids.map((id) => {
+          return figma.getNodeById(id);
+        }),
+      ];
+
+      //Search Page for new Nodes
+      newInstances = [
         ...(figma.currentPage.findAll(
           (n) =>
+            ids.indexOf(n.id) == -1 &&
             n.type == "INSTANCE" &&
             n.getSharedPluginData("TextCrop", "TextCrop") == "true"
         ) as InstanceNode[]),
       ];
     }
-    if (figma.currentPage.selection.length > 0) {
-      let inst: InstanceNode[] = [];
+
+    if (figma.currentPage.selection.length > 0 && figma.command == "UpdateSelected") {
+      let selectedInstances: InstanceNode[] = [];
 
       figma.currentPage.selection.forEach((n) => {
         if (n.type == "INSTANCE") {
-          inst.push(n);
+          selectedInstances.push(n);
         } else {
           if (n.parent.type == "INSTANCE") {
-            inst.push(n.parent);
+            selectedInstances.push(n.parent);
           } else {
             if ((n.parent.parent as any).type == "INSTANCE") {
-              inst.push(n.parent.parent as InstanceNode);
+              selectedInstances.push(n.parent.parent as InstanceNode);
             }
           }
         }
       });
-      instances = inst;
+      instances = selectedInstances;
     }
 
     let listOfIds = [];
 
-    const croppableInstances = instances.map((instance) => {
+    //From storage
+
+    const croppableInstances = instances.map((instance, index) => {
       listOfIds.push(instance.id);
       keys.add(instance.mainComponent.key);
       return crop(instance, grid);
     });
 
-    waitingClock = false;
+    //From page search
+    const croppableNewInstances = newInstances ? newInstances.map((instance) => {
+      listOfIds.push(instance.id);
+      keys.add(instance.mainComponent.key);
+      return crop(instance, grid);
+    }) : [];
 
     if (keys.size > 1) {
-      console.log(
-        "There's more than one component, its probably a bad idea right??"
-      );
+      //Conflicting libraries - ultimately we should only have one of these..
     }
     figma.clientStorage.setAsync("componentKey", keys[0]);
 
-    Promise.all(croppableInstances).then((res) => {
-      newDataCount > 0
-        ? console.log("Made new data for: " + newDataCount + " instance(s)")
-        : null;
+    Promise.all([...croppableInstances, ...croppableNewInstances]).then(
+      (res) => {
+        newDataCount > 0
+          ? console.log("Made new data for: " + newDataCount + " instance(s)")
+          : null;
 
-      let oldData = {};
-      let store = figma.root.getSharedPluginData("TextCrop", "fontData");
-      if (store) {
-        oldData = JSON.parse(
-          figma.root.getSharedPluginData("TextCrop", "fontData")
+        figma.currentPage.setSharedPluginData(
+          "TextCrop",
+          "nodeIds",
+          JSON.stringify(listOfIds)
         );
-      }
-      let newData = {};
+        let oldData = {};
+        let store = figma.root.getSharedPluginData("TextCrop", "fontData");
+        if (store) {
+          oldData = JSON.parse(
+            figma.root.getSharedPluginData("TextCrop", "fontData")
+          );
+        }
+        let newData = {};
 
-      function addProps(obj, arr, val) {
-        if (typeof arr == "string") arr = arr.split(".");
+        let onlyData = res.filter((data) => data != undefined);
+        onlyData.forEach((data) => {
+          addProps(
+            newData,
+            [JSON.stringify(data.fontName), data.size, data.profile],
+            data.cropData
+          );
+        });
 
-        obj[arr[0]] = obj[arr[0]] || {};
+        const setData = { ...oldData, ...newData };
 
-        var tmpObj = obj[arr[0]];
-
-        if (arr.length > 1) {
-          arr.shift();
-          addProps(tmpObj, arr, val);
-        } else obj[arr[0]] = val;
-
-        return obj;
-      }
-
-      let onlyData = res.filter((data) => data != undefined);
-      onlyData.forEach((data) => {
-        addProps(
-          newData,
-          [JSON.stringify(data.fontName), data.size, data.profile],
-          data.cropData
+        figma.root.setSharedPluginData(
+          "TextCrop",
+          "fontData",
+          JSON.stringify(setData)
         );
-        //newData[JSON.stringify(data.fontName)][data.size][data.profile] = data.cropData
-      });
 
-      const setData = { ...oldData, ...newData };
-
-      figma.root.setSharedPluginData(
-        "TextCrop",
-        "fontData",
-        JSON.stringify(setData)
-      );
-
-      function onlyUnique(value, index, self) {
-        return self.indexOf(value) === index;
-      }
-
-      let unique = listOfIds.filter(onlyUnique);
-      console.log(unique.length);
-      figma.currentPage.setSharedPluginData(
-        "TextCrop",
-        "nodeIds",
-        JSON.stringify(unique)
-      );
-      if (shouldClose) {
-        const t1 = Date.now();
-        console.log(
-          `Cropped ${instances.length} instances, took ${t1 - t0} ms`
+        let unique = listOfIds.filter(onlyUnique);
+        figma.currentPage.setSharedPluginData(
+          "TextCrop",
+          "nodeIds",
+          JSON.stringify(unique)
         );
-        figma.closePlugin(
-          `Cropped ${instances.length} instances, took ${t1 - t0} ms`
-        );
+        if (shouldClose) {
+          const t1 = Date.now();
+          console.log(
+            `Cropped ${
+              res.length
+            } instances, took ${t1 - t0} ms`
+          );
+          figma.closePlugin(
+            `Cropped ${
+              res.length
+            } instances, took ${t1 - t0} ms`
+          );
+        }
       }
-    });
+    );
   }
 }
 
-async function getLineHeight(node: TextNode) {
-  let lineHeight = node.getRangeLineHeight(0, 1);
-  let L;
-  if (typeof lineHeight == "object") {
-    if (lineHeight.unit == "PIXELS") {
-      L = lineHeight.value;
-    }
-    if (lineHeight.unit == "PERCENT") {
-      L = lineHeight.value * (node.getRangeFontSize(0, 1) as number);
-    }
-    if (lineHeight.unit == "AUTO") {
-      let c = node.clone();
-      await loadUniqueFonts([c]);
-      //await figma.loadFontAsync(node.getRangeFontName(0,1) as FontName)
-      c.characters = "T";
-      c.textAutoResize = "WIDTH_AND_HEIGHT";
-      L = c.height;
-      c.remove();
-    }
+
+
+figma.on("selectionchange", () => {
+  //Update the count in the UI
+  let sel = figma.currentPage.selection;
+  let instances = sel.filter(
+    (n) =>
+      n.getSharedPluginData("TextCrop", "multiline") && n.type == "INSTANCE"
+  );
+  if (figma.ui) {
+    dispatch("selection", instances.length);
   }
-  return L;
-}
+});
+handleEvent("cropProfile", (data) => {
+  let sel = figma.currentPage.selection;
+  let instances = sel.filter(
+    (n) => n.getSharedPluginData("TextCrop", "TextCrop") && n.type == "INSTANCE"
+  );
+
+  instances.forEach((instance) => {
+    instance.setSharedPluginData("TextCrop", "top", data.top);
+    instance.setSharedPluginData("TextCrop", "bottom", data.bottom);
+  });
+});
+
+handleEvent("resizeUI", (size) => {
+  figma.ui.resize(size[0], size[1]);
+});
+
+handleEvent("gridSize", (size) => {
+  figma.clientStorage.setAsync("gridSize", size);
+});

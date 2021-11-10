@@ -16,3 +16,18 @@ export function onlyUnique(value, index, self) {
       return this
     }
   }
+
+  export function addProps(obj, arr, val) {
+    if (typeof arr == "string") arr = arr.split(".");
+
+    obj[arr[0]] = obj[arr[0]] || {};
+
+    var tmpObj = obj[arr[0]];
+
+    if (arr.length > 1) {
+      arr.shift();
+      addProps(tmpObj, arr, val);
+    } else obj[arr[0]] = val;
+
+    return obj;
+  }

@@ -26,7 +26,31 @@ export async function loadFonts(fonts: Array<FontName>) {
 	await Promise.all(promises)
 	return fonts
 }
-export default async function loadUniqueFonts(textNodes: Array<TextNode>) {
+export async function loadUniqueFonts(textNodes: Array<TextNode>) {
 	const fonts = getAllFonts(textNodes)
 	return loadFonts(fonts)
 }
+
+
+export async function getLineHeight(node: TextNode) {
+	let lineHeight = node.getRangeLineHeight(0, 1);
+	let L;
+	if (typeof lineHeight == "object") {
+	  if (lineHeight.unit == "PIXELS") {
+		L = lineHeight.value;
+	  }
+	  if (lineHeight.unit == "PERCENT") {
+		L = lineHeight.value * (node.getRangeFontSize(0, 1) as number);
+	  }
+	  if (lineHeight.unit == "AUTO") {
+		let c = node.clone();
+		await loadUniqueFonts([c]);
+		//await figma.loadFontAsync(node.getRangeFontName(0,1) as FontName)
+		c.characters = "T";
+		c.textAutoResize = "WIDTH_AND_HEIGHT";
+		L = c.height;
+		c.remove();
+	  }
+	}
+	return L;
+  }

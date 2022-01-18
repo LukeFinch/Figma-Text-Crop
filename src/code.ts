@@ -7,13 +7,14 @@ figma.root.setRelaunchData({
   Update: "Launch the text crop plugin to resize text crop components",
 });
 
-
+figma.skipInvisibleInstanceChildren = true  
 
 let newDataCount = 0;
 
 type ContainerNode = BaseNode & ChildrenMixin;
 
 import { prompt } from "./prompt";
+
 
 var documentName = (node: any) =>
   node.type == "DOCUMENT" ? node.name : documentName(node.parent);
@@ -125,7 +126,6 @@ async function crop(node: InstanceNode, gridSize) {
   if (cropData !== "") {
     //Object Exists
     let data = JSON.parse(cropData) as cropData;
-
     let lH = await getLineHeight(textNode);
 
     var nodeCropData = function (data) {
@@ -142,11 +142,14 @@ async function crop(node: InstanceNode, gridSize) {
     };
 
     let nodeData = nodeCropData(data);
-
     if (nodeData) {
       cropNodeWithData(node, nodeData, gridSize, lH);
-    } else {
+    }}
+    
+    else {
       newDataCount++;
+      let data = {}
+      let lH = await getLineHeight(textNode)
       //We don't have data for this config
       //Initalise the objects to store the data
       !!data[JSON.stringify(textNode.fontName)]
@@ -164,11 +167,11 @@ async function crop(node: InstanceNode, gridSize) {
       //Copy the text outside the instance so we can manipulate it
 
       const clone = textNode.clone();
+      console.log('Clone',clone)
       await loadUniqueFonts([clone]);
       clone.characters = profileTop + profileBottom; //We use the letter T to get an accurate baseline and line height
 
       figma.currentPage.insertChild(0, clone);
-      clone.name = "Text Crop Clone";
       clone.visible = true;
       clone.opacity = 0; //Hide the layer - doesn't work if invisible
       clone.x = 0; //Not necessary as such, but cleaner
@@ -197,15 +200,9 @@ async function crop(node: InstanceNode, gridSize) {
         profile: profileTop + profileBottom,
       }; //Data we need to save to the root
 
-      // figma.root.setSharedPluginData(
-      //   "TextCrop",
-      //   "fontData",
-      //   JSON.stringify(data)
-      // );
     }
-  } else {
-  }
-}
+  } 
+
 
 interface cropData {
   pT: number;
@@ -300,28 +297,11 @@ async function updateInstances(shouldClose) {
   } else {
     //User clicked update page
     if (figma.command == "Update") {
-
-
-      //Stored IDs
-      let ids = JSON.parse(
-        figma.currentPage.getSharedPluginData("TextCrop", "nodeIds")
-      );
       instances = [
-        ...ids.map((id) => {
-          return figma.getNodeById(id);
-        }),
-      ];
-
-      //Search Page for new Nodes
-      newInstances = [
-        ...(figma.currentPage.findAll(
-          (n) =>
-            ids.indexOf(n.id) == -1 &&
-            n.type == "INSTANCE" &&
-            n.getSharedPluginData("TextCrop", "TextCrop") == "true"
-        ) as InstanceNode[]),
-      ];
+        ...(figma.currentPage.findAllWithCriteria({ types: ["INSTANCE"] }).filter(n => n.getSharedPluginData("TextCrop", "TextCrop") == "true"))
+      ]
     }
+
 
     if (figma.currentPage.selection.length > 0 && figma.command == "UpdateSelected") {
       let selectedInstances: InstanceNode[] = [];
@@ -342,71 +322,18 @@ async function updateInstances(shouldClose) {
       instances = selectedInstances;
     }
 
-    let listOfIds = [];
-
-    //From storage
-
-    const croppableInstances = instances.map((instance, index) => {
-      listOfIds.push(instance.id);
-      keys.add(instance.mainComponent.key);
-      return crop(instance, grid);
-    });
-
-    //From page search
-    const croppableNewInstances = newInstances ? newInstances.map((instance) => {
-      listOfIds.push(instance.id);
-      keys.add(instance.mainComponent.key);
-      return crop(instance, grid);
-    }) : [];
 
     if (keys.size > 1) {
       //Conflicting libraries - ultimately we should only have one of these..
     }
     figma.clientStorage.setAsync("componentKey", keys[0]);
 
-    Promise.all([...croppableInstances, ...croppableNewInstances]).then(
+    Promise.all([
+    ...instances.map(i => crop(i, grid))
+  ]).then(
+
       (res) => {
-        newDataCount > 0
-          ? console.log("Made new data for: " + newDataCount + " instance(s)")
-          : null;
 
-        figma.currentPage.setSharedPluginData(
-          "TextCrop",
-          "nodeIds",
-          JSON.stringify(listOfIds)
-        );
-        let oldData = {};
-        let store = figma.root.getSharedPluginData("TextCrop", "fontData");
-        if (store) {
-          oldData = JSON.parse(
-            figma.root.getSharedPluginData("TextCrop", "fontData")
-          );
-        }
-        let newData = {};
-
-        let onlyData = res.filter((data) => data != undefined);
-        onlyData.forEach((data) => {
-          addProps(
-            newData,
-            [JSON.stringify(data.fontName), data.size, data.profile],
-            data.cropData
-          );
-        });
-
-        const setData = { ...oldData, ...newData };
-
-        figma.root.setSharedPluginData(
-          "TextCrop",
-          "fontData",
-          JSON.stringify(setData)
-        );
-
-        let unique = listOfIds.filter(onlyUnique);
-        figma.currentPage.setSharedPluginData(
-          "TextCrop",
-          "nodeIds",
-          JSON.stringify(unique)
-        );
         if (shouldClose) {
           const t1 = Date.now();
           console.log(
@@ -457,3 +384,5 @@ handleEvent("resizeUI", (size) => {
 handleEvent("gridSize", (size) => {
   figma.clientStorage.setAsync("gridSize", size);
 });
+
+

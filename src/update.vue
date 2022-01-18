@@ -196,7 +196,7 @@ export default {
 
     onMounted(() => {
       dispatch("ready");
-
+      console.log(document.getElementById('app').getBoundingClientRect())
       selectMenu.init();
 
       const resizeObserver = new ResizeObserver(function () {

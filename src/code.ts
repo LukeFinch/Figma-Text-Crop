@@ -236,9 +236,10 @@ async function cropNodeWithData(
     let textHeight = textNode.height; //Actual Height of the text
     console.log(textHeight)
     textNode.textAutoResize = sizing; //"NONE"
+
     let nodeSize = textNode.height; //The height of the container when its fixed.
-    n = Math.ceil(textHeight / lineHeight); // Number of lines. Should always be a whole number...
-    console.log(n,lineHeight,nodeSize)
+    n = Math.round(textHeight / lineHeight); // Number of lines. Should always be a whole number...
+   
   } else {
     n = 1;
   }

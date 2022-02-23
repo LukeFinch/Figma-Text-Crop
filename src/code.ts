@@ -99,7 +99,13 @@ async function promptGrid() {
 }
 
 async function crop(node: InstanceNode, gridSize) {
-  let textNode = (node.children[0] as ContainerNode).children[0] as TextNode;
+  let cropFrame = node.children[0] as FrameNode
+  let textNode =   cropFrame.children[0] as TextNode;
+  
+
+  //Force to be fixed height
+  cropFrame.layoutMode == "VERTICAL" ? cropFrame.primaryAxisSizingMode = "FIXED" : cropFrame.counterAxisSizingMode = "FIXED" ;
+
   let fontName = textNode.getRangeFontName(0, 1) as FontName;
   await loadUniqueFonts([textNode]);
   //Get Crop Profiles
@@ -224,7 +230,9 @@ async function cropNodeWithData(
   let textNode = (node.children[0] as ContainerNode).children[0] as TextNode;
 
   let sizing = textNode.textAutoResize;
-  console.log(sizing)
+
+
+
 
   lineHeight
     ? (lineHeight = lineHeight)
@@ -243,6 +251,8 @@ async function cropNodeWithData(
   } else {
     n = 1;
   }
+
+  
 
   let fontSize = textNode.getRangeFontSize(0, 1) as number;
 
@@ -412,5 +422,6 @@ handleEvent("resizeUI", (size) => {
 handleEvent("gridSize", (size) => {
   figma.clientStorage.setAsync("gridSize", size);
 });
+
 
 

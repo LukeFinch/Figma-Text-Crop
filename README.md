@@ -11,7 +11,7 @@ This plugin creates a component, which dynamically resizes to ensure text is the
 This plugin is available for [installation here](https://www.figma.com/community/plugin/951930713294228024/Text-Crop)
 
 ## Instructions for use
-A full guide on how to use this plugin in your design files has kindly been written by the [NewsKit Design Team](https://newskit.co.uk)
+A [full guide on how to use this plugin](https://www.figma.com/community/file/1106697675173909838) in your design files has kindly been written by the [NewsKit Design Team](https://newskit.co.uk)
 
 ## Building and installing for development
 

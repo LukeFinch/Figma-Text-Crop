@@ -1,3 +1,5 @@
+![Logo Cover for Text Crop Plugin](https://github.com/LukeFinch/Figma-Text-Crop/raw/main/Cover.png)
+
 # Text Crop Figma Plugin
 
 Text Crop is a plugin that removes the whitespace around text boxes. No longer will you have extra leading above and below your text. Layout designs in the way you intended.

@@ -1,13 +1,13 @@
 import { dispatch, handleEvent } from "./codeMessageHandler";
 import makeCropComponent from "./makeCropComponent";
-import {loadUniqueFonts, getLineHeight} from "./fontUtils";
-import { onlyUnique, addProps } from "./util";
+import { onlyUnique, addProps, loadUniqueFonts, getLineHeight } from "./util";
 
 
 interface cropData {
   pT: number;
   pB: number;
 }
+type ContainerNode = BaseNode & ChildrenMixin;
 
 
 //Make it always show the relaunch button
@@ -19,7 +19,6 @@ figma.skipInvisibleInstanceChildren = true
 
 let newDataCount = 0;
 
-type ContainerNode = BaseNode & ChildrenMixin;
 
 import { prompt } from "./prompt";
 

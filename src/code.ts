@@ -72,6 +72,7 @@ handleEvent("ready", () => {
 });
 
 handleEvent("updateInstances", async (data) => {
+  // console.log('Crop message handler')
   if (data == "clock") {
     updateInstances(false);
   } else {
@@ -151,7 +152,6 @@ export async function crop(node: InstanceNode, gridSize) {
     else {
       //Data doesn't exist
       //Actually currently it never exists..
-
       let data = {}
       let lH = await getLineHeight(textNode)
       //We don't have data for this config
@@ -353,7 +353,6 @@ async function updateInstances(shouldClose) {
           }
         }
       });
-
       instances = selectedInstances;
     }
 

@@ -199,16 +199,6 @@ export default {
     message: "",
   },
   setup(props) {
-    const topListOptions = ref([
-      { value: "ascender", label: "Ascender" },
-      { value: "capheight", label: "Capheight" },
-      { value: "xheight", label: "X-height" },
-    ]);
-
-    const bottomListOptions = ref([
-      { value: "baseline", label: "Baseline" },
-      { value: "descender", label: "Descender" },
-    ]);
 
     const top = ref("capheight");
     const bottom = ref("descender");

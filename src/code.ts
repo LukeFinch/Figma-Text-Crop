@@ -1,5 +1,7 @@
 import { dispatch, handleEvent } from "./codeMessageHandler";
 import makeCropComponent from "./makeCropComponent";
+
+import { prompt } from "./prompt";
 import { onlyUnique, addProps, loadUniqueFonts, getLineHeight } from "./util";
 
 
@@ -15,12 +17,7 @@ figma.root.setRelaunchData({
   Update: "Launch the text crop plugin to resize text crop components",
 });
 
-figma.skipInvisibleInstanceChildren = true  
-
-let newDataCount = 0;
-
-
-import { prompt } from "./prompt";
+figma.skipInvisibleInstanceChildren = true
 
 
 var documentName = (node: any) =>
@@ -40,8 +37,9 @@ switch (figma.command) {
   case "UpdateMenu":
     async function loadUI() {
       figma.showUI(__uiFiles__.update, {
+        themeColors: true,
         width: 400,
-        height: 300,
+        height: 314,
         visible: false,
       });
       let grid = await getGridSize();
@@ -74,7 +72,6 @@ handleEvent("ready", () => {
 });
 
 handleEvent("updateInstances", async (data) => {
-  // console.log('Crop message handler')
   if (data == "clock") {
     updateInstances(false);
   } else {
@@ -97,10 +94,9 @@ async function promptGrid() {
   }
 }
 
-async function crop(node: InstanceNode, gridSize) {
+export async function crop(node: InstanceNode, gridSize) {
   let cropFrame = node.children[0] as FrameNode
   let textNode =   cropFrame.children[0] as TextNode;
-  
 
   //Force to be fixed height
   cropFrame.layoutMode == "VERTICAL" ? cropFrame.primaryAxisSizingMode = "FIXED" : cropFrame.counterAxisSizingMode = "FIXED" ;
@@ -110,6 +106,7 @@ async function crop(node: InstanceNode, gridSize) {
   //Get Crop Profiles
   let profileTop = "";
   let profileBottom = "";
+  console.log('shared top',node.getSharedPluginData("TextCrop", "top"))
   switch (node.getSharedPluginData("TextCrop", "top")) {
     case "ascender":
       profileTop = "f";
@@ -154,7 +151,7 @@ async function crop(node: InstanceNode, gridSize) {
     else {
       //Data doesn't exist
       //Actually currently it never exists..
-      newDataCount++;
+
       let data = {}
       let lH = await getLineHeight(textNode)
       //We don't have data for this config
@@ -192,12 +189,16 @@ async function crop(node: InstanceNode, gridSize) {
       let pT = H / 2 - T.y;
       let pB = T.height - pT;
 
+      console.log(profileTop, profileBottom)
+
       T.remove(); // Delete the clones, clean up our mess as soon as we are done with it
       let cropData: cropData;
       T ? (cropData = { pT: pT, pB: pB }) : null;
       data[JSON.stringify(textNode.fontName)][textNode.fontSize][
         profileTop + profileBottom
       ] = cropData;
+
+      console.log('the crop data is', cropData)
 
       cropNodeWithData(node, cropData, gridSize, lH);
       return {
@@ -295,7 +296,6 @@ async function updateInstances(shouldClose) {
   var grid = await getGridSize();
 
   var instances: InstanceNode[];
-  var newInstances: InstanceNode[]; //When we search page for instances not in storage
 
   //User is editing a text node
   if (
@@ -331,13 +331,13 @@ async function updateInstances(shouldClose) {
           }
         }
       });
-      // console.log(selectedInstances)
+
       instances = selectedInstances;
     }
 
 
     if (figma.currentPage.selection.length > 0 && shouldClose == false) {
-      // console.log("Call from the UI")
+
       let selectedInstances: InstanceNode[] = [];
 
       figma.currentPage.selection.forEach((n) => {
@@ -353,7 +353,7 @@ async function updateInstances(shouldClose) {
           }
         }
       });
-      // console.log(selectedInstances)
+
       instances = selectedInstances;
     }
 
@@ -403,12 +403,15 @@ figma.on("selectionchange", () => {
   }
 });
 handleEvent("cropProfile", (data) => {
+  console.log(data, "cropProfile")
   let sel = figma.currentPage.selection;
   let instances = sel.filter(
     (n) => n.getSharedPluginData("TextCrop", "TextCrop") && n.type == "INSTANCE"
   );
 
   instances.forEach((instance) => {
+    
+    console.log('Setting data for...', instance, data)
     instance.setSharedPluginData("TextCrop", "top", data.top);
     instance.setSharedPluginData("TextCrop", "bottom", data.bottom);
   });

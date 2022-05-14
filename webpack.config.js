@@ -27,6 +27,7 @@ module.exports = (env, argv) => ({
 
 			// Enables including CSS by doing "import './file.css'" in your TypeScript code
 			{ test: /\.css$/, loader: [{ loader: 'style-loader' }, { loader: 'css-loader' }] },
+			
 			{
 				test: /\.scss$/,
 				use: [
@@ -43,11 +44,6 @@ module.exports = (env, argv) => ({
 						}
 					}
 				]
-			},
-
-			{
-				test: /\.pug$/,
-				loader: 'pug-plain-loader'
 			},
 
 			{

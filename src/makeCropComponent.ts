@@ -237,6 +237,7 @@ export default async function makeCropComponent() {
       componentSet.itemSpacing = 16;
       componentSet.description = "";
 
+      componentSet.setSharedPluginData("TextCrop", "TextCrop", "true");
       componentAutoWidth.setSharedPluginData("TextCrop", "TextCrop", "true");
       componentAutoHeight.setSharedPluginData("TextCrop", "TextCrop", "true");
       componentAutoWidth.setSharedPluginData("TextCrop", "multiline", "false");

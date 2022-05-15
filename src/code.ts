@@ -1,8 +1,22 @@
-import { dispatch, handleEvent } from "./codeMessageHandler";
+import {
+  dispatch,
+  handleEvent
+} from "./codeMessageHandler";
 import makeCropComponent from "./makeCropComponent";
 
-import { prompt } from "./prompt";
-import { onlyUnique, addProps, loadUniqueFonts, getLineHeight } from "./util";
+import {
+  prompt
+} from "./prompt";
+import {
+  onlyUnique,
+  addProps,
+  loadUniqueFonts,
+  getLineHeight
+} from "./util";
+
+import {
+  swapNodes
+} from './swapNodes'
 
 
 interface cropData {
@@ -36,19 +50,20 @@ switch (figma.command) {
     break;
   case "UpdateMenu":
     async function loadUI() {
+      let grid = await getGridSize();
+      let key = await figma.clientStorage.getAsync("componentKey");
       figma.showUI(__uiFiles__.update, {
         themeColors: true,
         width: 400,
         height: 314,
-        visible: false,
+        visible: true,
       });
-      let grid = await getGridSize();
-      let key = await figma.clientStorage.getAsync("componentKey");
+      figma.ui.show()
       dispatch("gridSize", grid);
-      if (key) {
+      if (key !== undefined) {
         dispatch("componentKey", key);
       }
-      figma.ui.show();
+
     }
     loadUI();
     break;
@@ -58,6 +73,15 @@ switch (figma.command) {
   case "ChangeGrid":
     promptGrid();
     break;
+  case "SetTarget":
+    setTarget()
+    break;
+  case "SwapText":
+    figma.clientStorage.getAsync('componentKey').then( key => {
+      figma.currentPage.selection.filter(n => n.type == "TEXT").forEach((text: TextNode) => swapNodes(text, key))
+    })
+    break;
+    
   default:
     figma.showUI(__uiFiles__.update);
 }
@@ -66,7 +90,7 @@ handleEvent("ready", () => {
   let sel = figma.currentPage.selection;
   let instances = sel.filter(
     (n) =>
-      n.getSharedPluginData("TextCrop", "multiline") && n.type == "INSTANCE"
+    n.getSharedPluginData("TextCrop", "multiline") && n.type == "INSTANCE"
   );
   dispatch("selection", instances.length);
 });
@@ -97,17 +121,17 @@ async function promptGrid() {
 
 export async function crop(node: InstanceNode, gridSize) {
   let cropFrame = node.children[0] as FrameNode
-  let textNode =   cropFrame.children[0] as TextNode;
+  let textNode = cropFrame.children[0] as TextNode;
 
   //Force to be fixed height
-  cropFrame.layoutMode == "VERTICAL" ? cropFrame.primaryAxisSizingMode = "FIXED" : cropFrame.counterAxisSizingMode = "FIXED" ;
+  cropFrame.layoutMode == "VERTICAL" ? cropFrame.primaryAxisSizingMode = "FIXED" : cropFrame.counterAxisSizingMode = "FIXED";
 
   let fontName = textNode.getRangeFontName(0, 1) as FontName;
   await loadUniqueFonts([textNode]);
   //Get Crop Profiles
   let profileTop = "";
   let profileBottom = "";
-  console.log('shared top',node.getSharedPluginData("TextCrop", "top"))
+  console.log('shared top', node.getSharedPluginData("TextCrop", "top"))
   switch (node.getSharedPluginData("TextCrop", "top")) {
     case "ascender":
       profileTop = "f";
@@ -127,90 +151,91 @@ export async function crop(node: InstanceNode, gridSize) {
   }
 
   let cropData = figma.root.getSharedPluginData("TextCrop", "fontData");
-  let data =  cropData ? JSON.parse(cropData) : null;
+  let data = cropData ? JSON.parse(cropData) : null;
 
 
-    let lH = await getLineHeight(textNode);
+  let lH = await getLineHeight(textNode);
 
-    var nodeCropData = function (data) {
-      let nodeData = null;
-      try {
-        nodeData =
-          data[JSON.stringify(fontName)][textNode.fontSize][
-            profileTop + profileBottom
-          ];
-      } catch (e) {
-        nodeData = null;
-      }
-      return nodeData;
-    };
-
-    let nodeData = nodeCropData(data);
-    if (nodeData) {
-      cropNodeWithData(node, nodeData, gridSize, lH);
+  var nodeCropData = function (data) {
+    let nodeData = null;
+    try {
+      nodeData =
+        data[JSON.stringify(fontName)][textNode.fontSize][
+          profileTop + profileBottom
+        ];
+    } catch (e) {
+      nodeData = null;
     }
-    else {
-      //Data doesn't exist
-      //Actually currently it never exists..
-      let data = {}
-      let lH = await getLineHeight(textNode)
+    return nodeData;
+  };
+
+  let nodeData = nodeCropData(data);
+  if (nodeData) {
+    cropNodeWithData(node, nodeData, gridSize, lH);
+  } else {
+    //Data doesn't exist
+    //Actually currently it never exists..
+    let data = {}
+    let lH = await getLineHeight(textNode)
       //We don't have data for this config
       //Initalise the objects to store the data
-      !!data[JSON.stringify(textNode.fontName)]
-        ? null
-        : (data[JSON.stringify(textNode.fontName)] = {});
-      !!data[JSON.stringify(textNode.fontName)][textNode.fontSize]
-        ? null
-        : (data[JSON.stringify(textNode.fontName)][textNode.fontSize] = {});
-      !!data[JSON.stringify(textNode.fontName)][textNode.fontSize][
+      !!data[JSON.stringify(textNode.fontName)] ?
+      null :
+      (data[JSON.stringify(textNode.fontName)] = {});
+    !!data[JSON.stringify(textNode.fontName)][textNode.fontSize] ?
+      null :
+      (data[JSON.stringify(textNode.fontName)][textNode.fontSize] = {});
+    !!data[JSON.stringify(textNode.fontName)][textNode.fontSize][
         profileTop + profileBottom
-      ]
-        ? null
-        : {};
+      ] ?
+      null :
+      {};
 
-      //Copy the text outside the instance so we can manipulate it
+    //Copy the text outside the instance so we can manipulate it
 
-      const clone = textNode.clone();
-      // console.log('Clone',clone)
-      await loadUniqueFonts([clone]);
-      clone.characters = profileTop + profileBottom; //We use the letter T to get an accurate baseline and line height
+    const clone = textNode.clone();
+    // console.log('Clone',clone)
+    await loadUniqueFonts([clone]);
+    clone.characters = profileTop + profileBottom; //We use the letter T to get an accurate baseline and line height
 
-      figma.currentPage.insertChild(0, clone);
-      clone.visible = true;
-      clone.opacity = 0; //Hide the layer - doesn't work if invisible
-      clone.x = 0; //Not necessary as such, but cleaner
-      clone.y = 0; //Sets the Y value to 0, so we have a reference point when flattening
-      clone.textAutoResize = "WIDTH_AND_HEIGHT"; // Make it take up the true line height
+    figma.currentPage.insertChild(0, clone);
+    clone.visible = true;
+    clone.opacity = 0; //Hide the layer - doesn't work if invisible
+    clone.x = 0; //Not necessary as such, but cleaner
+    clone.y = 0; //Sets the Y value to 0, so we have a reference point when flattening
+    clone.textAutoResize = "WIDTH_AND_HEIGHT"; // Make it take up the true line height
 
-      //We know the top and bottom config
-      let H = clone.height;
+    //We know the top and bottom config
+    let H = clone.height;
 
-      let T = figma.flatten([clone]);
-      let pT = H / 2 - T.y;
-      let pB = T.height - pT;
+    let T = figma.flatten([clone]);
+    let pT = H / 2 - T.y;
+    let pB = T.height - pT;
 
-      console.log(profileTop, profileBottom)
 
-      T.remove(); // Delete the clones, clean up our mess as soon as we are done with it
-      let cropData: cropData;
-      T ? (cropData = { pT: pT, pB: pB }) : null;
-      data[JSON.stringify(textNode.fontName)][textNode.fontSize][
-        profileTop + profileBottom
-      ] = cropData;
+    T.remove(); // Delete the clones, clean up our mess as soon as we are done with it
+    let cropData: cropData;
+    T ? (cropData = {
+      pT: pT,
+      pB: pB
+    }) : null;
+    data[JSON.stringify(textNode.fontName)][textNode.fontSize][
+      profileTop + profileBottom
+    ] = cropData;
 
-      console.log('the crop data is', cropData)
 
-      cropNodeWithData(node, cropData, gridSize, lH);
-      return {
-        fontName,
-        size: textNode.getRangeFontSize(0, 1) as number,
-        cropData,
-        profile: profileTop + profileBottom,
-      }; //Data we need to save to the root
 
-    }
+    cropNodeWithData(node, cropData, gridSize, lH);
+    return {
+      fontName,
+      size: textNode.getRangeFontSize(0, 1) as number,
+      cropData,
+      profile: profileTop + profileBottom,
+    }; //Data we need to save to the root
+
   }
-    
+}
+
 
 
 
@@ -220,7 +245,7 @@ async function cropNodeWithData(
   node: InstanceNode,
   data: cropData,
   gridSize: number,
-  lineHeight?: number
+  lineHeight ? : number
 ) {
   isNaN(gridSize) ? (gridSize = await getGridSize()) : null;
 
@@ -235,8 +260,9 @@ async function cropNodeWithData(
 
 
   lineHeight
-    ? (lineHeight = lineHeight)
-    : (lineHeight = await getLineHeight(textNode));
+    ?
+    (lineHeight = lineHeight) :
+    (lineHeight = await getLineHeight(textNode));
   if (sizing == "HEIGHT") {
     //Only need if multiline ?
     //This method gets the actual height of the text
@@ -247,12 +273,12 @@ async function cropNodeWithData(
 
     let nodeSize = textNode.height; //The height of the container when its fixed.
     n = Math.round(textHeight / lineHeight); // Number of lines. Should always be a whole number...
-   
+
   } else {
     n = 1;
   }
 
-  
+
 
   let fontSize = textNode.getRangeFontSize(0, 1) as number;
 
@@ -265,9 +291,9 @@ async function cropNodeWithData(
   //TODO: Check the alignment of text in the text box, let users center, top or bottom align
   node.paddingTop = paddingTop;
   node.paddingBottom =
-    gridSize == 0
-      ? paddingBottom
-      : gridRound(paddingBottom + paddingTop, gridSize) - paddingTop;
+    gridSize == 0 ?
+    paddingBottom :
+    gridRound(paddingBottom + paddingTop, gridSize) - paddingTop;
 }
 
 function gridRound(number, gridSize) {
@@ -312,7 +338,9 @@ async function updateInstances(shouldClose) {
     //User clicked update page
     if (figma.command == "Update") {
       instances = [
-        ...(figma.currentPage.findAllWithCriteria({ types: ["INSTANCE"] }).filter(n => n.getSharedPluginData("TextCrop", "TextCrop") == "true"))
+        ...(figma.currentPage.findAllWithCriteria({
+          types: ["INSTANCE"]
+        }).filter(n => n.getSharedPluginData("TextCrop", "TextCrop") == "true"))
       ]
     }
     if (figma.command == "UpdateSelected") {
@@ -360,11 +388,11 @@ async function updateInstances(shouldClose) {
     if (keys.size > 1) {
       //Conflicting libraries - ultimately we should only have one of these..
     }
-    figma.clientStorage.setAsync("componentKey", keys[0]);
+    //figma.clientStorage.setAsync("componentKey", keys[0]);
 
     Promise.all([
-    ...instances.map(i => crop(i, grid))
-  ]).then(
+      ...instances.map(i => crop(i, grid))
+    ]).then(
 
       (res) => {
 
@@ -393,13 +421,13 @@ figma.on("selectionchange", () => {
   let sel = figma.currentPage.selection;
   let instances = sel.filter(
     (n) =>
-      n.getSharedPluginData("TextCrop", "multiline") && n.type == "INSTANCE"
+    n.getSharedPluginData("TextCrop", "multiline") && n.type == "INSTANCE"
   );
 
-  if (figma.ui) {
-    console.log(console.log(figma.ui))
-    dispatch("selection", instances.length);
-  }
+    try{dispatch("selection", instances.length)}catch(e){
+      //no ui to send to
+    }
+
 });
 handleEvent("cropProfile", (data) => {
   console.log(data, "cropProfile")
@@ -409,7 +437,7 @@ handleEvent("cropProfile", (data) => {
   );
 
   instances.forEach((instance) => {
-    
+
     console.log('Setting data for...', instance, data)
     instance.setSharedPluginData("TextCrop", "top", data.top);
     instance.setSharedPluginData("TextCrop", "bottom", data.bottom);
@@ -425,4 +453,34 @@ handleEvent("gridSize", (size) => {
 });
 
 
+function setTarget(){
+  console.log("Setting target")
+  let newKey = null
 
+ let sel = figma.currentPage.selection
+
+  if(sel.length){
+    sel.forEach((n: ComponentNode | InstanceNode | ComponentSetNode) => {
+      if(n.getSharedPluginDataKeys("TextCrop") || n.getPluginDataKeys()){
+      if(n.type == "COMPONENT_SET"){ newKey = n.key }
+      if( n.type == "COMPONENT"){newKey = (n.parent as ComponentSetNode).key}
+      if(n.type == "INSTANCE"){
+ 
+        newKey =  (n.mainComponent.parent as ComponentSetNode).key}
+      }
+    })
+  } else {
+    figma.closePlugin('No Text Crop components found in your selection')
+  }
+
+  if(newKey){
+    figma.importComponentSetByKeyAsync(newKey).then(fufilled => {
+      figma.clientStorage.setAsync('componentKey', newKey)
+      figma.closePlugin('Target Set')
+    },rejected => {
+      figma.closePlugin('Target text crop component must be part of a published library')
+    })
+  }
+
+
+}

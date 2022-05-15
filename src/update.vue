@@ -179,7 +179,7 @@ import Disclosure from "./components/Disclosure.vue";
 const autoUpdate = ref(false);
 const updateFrequency = ref(50);
 const gridSize = ref(0);
-const componentKey = ref("a46bf185241459316d7c3843a39027b19ce27032");
+const componentKey = ref("");
 
 const selectionCount = ref(0);
 
@@ -205,7 +205,6 @@ export default {
 
     onMounted(() => {
       dispatch("ready");
-      console.log(document.getElementById('app').getBoundingClientRect())
       selectMenu.init();
 
       const resizeObserver = new ResizeObserver(function () {
@@ -272,8 +271,6 @@ export default {
       swapText,
       helperText,
       selectionCount,
-      topListOptions,
-      bottomListOptions,
       bottom,
       top,
     };

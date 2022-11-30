@@ -25,6 +25,25 @@ interface cropData {
 }
 type ContainerNode = BaseNode & ChildrenMixin;
 
+figma.on("selectionchange", () => {
+  console.log("selection change")
+})
+
+figma.on("documentchange", (event) => {
+  console.log(event)
+  for (const change of event.documentChanges) {
+    if (
+      change.type === "PROPERTY_CHANGE" &&
+      change.properties.some((prop) => prop === "height")
+    ) {
+      const node = figma.getNodeById(change.id);
+      if (node?.type === "INSTANCE") {
+        crop(node, 0)
+      }
+    }
+  }
+});
+
 
 //Make it always show the relaunch button
 figma.root.setRelaunchData({
@@ -201,8 +220,9 @@ export async function crop(node: InstanceNode, gridSize) {
     figma.currentPage.insertChild(0, clone);
     clone.visible = true;
     clone.opacity = 0; //Hide the layer - doesn't work if invisible
-    clone.x = 0; //Not necessary as such, but cleaner
-    clone.y = 0; //Sets the Y value to 0, so we have a reference point when flattening
+    console.log('view',figma.viewport, figma.viewport.bounds.x + figma.viewport.bounds.width)
+    clone.x = figma.viewport.bounds.x + figma.viewport.bounds.width; //Not necessary as such, but cleaner
+    clone.y = figma.viewport.bounds.y + figma.viewport.bounds.height; //Sets the Y value to 0, so we have a reference point when flattening
     clone.textAutoResize = "WIDTH_AND_HEIGHT"; // Make it take up the true line height
 
     //We know the top and bottom config
@@ -481,6 +501,9 @@ function setTarget(){
       figma.closePlugin('Target text crop component must be part of a published library')
     })
   }
+
+
+
 
 
 }

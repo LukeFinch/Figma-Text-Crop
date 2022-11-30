@@ -2,6 +2,7 @@
 	"name": "Text Crop",
 	"api": "1.0.0",
 	"main": "dist/code.js",
+	"enableProposedApi": true,
 	"ui": {
 		"update":"dist/update.html"
 	},

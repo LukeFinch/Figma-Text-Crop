@@ -1,93 +1,94 @@
-const HtmlWebpackInlineSourcePlugin = require('html-webpack-inline-source-plugin');
-const RemovePlugin = require('remove-files-webpack-plugin');
+const ReactRefreshPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+const ReactRefreshTypeScript = require('react-refresh-typescript').default;
+const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const { VueLoaderPlugin } = require('vue-loader');
+const HtmlWebpackInlineSourcePlugin = require('html-webpack-inline-source-plugin');
+const webpack = require('webpack');
 const path = require('path');
 
 module.exports = (env, argv) => ({
-	// This is necessary because Figma's 'eval' works differently than normal eval
-	devtool: argv.mode === 'production' ? false : 'inline-source-map',
+  mode: argv.mode === 'production' ? 'production' : 'development',
 
-	entry: {
-		update: './src/update.ts', // The entry point for your UI code
-		code: './src/code.ts' // The entry point for your plugin code
-	},
+  // This is necessary because Figma's 'eval' works differently than normal eval
+  devtool: argv.mode === 'production' ? false : 'inline-source-map',
 
-	module: {
-		rules: [
-			// Converts TypeScript code to JavaScript
-			{
-				test: /\.tsx?$/,
-				loader: 'ts-loader',
-				exclude: /node_modules/,
-				options: {
-					appendTsSuffixTo: [/\.vue$/]
-				}
-			},
+  entry: {
+    ui: './src/ui/ui.tsx', // The entry point for your UI code
+    code: './src/plugin/code.ts', // The entry point for your plugin code
+  },
 
-			// Enables including CSS by doing "import './file.css'" in your TypeScript code
-			{ test: /\.css$/, loader: [{ loader: 'style-loader' }, { loader: 'css-loader' }] },
-			
-			{
-				test: /\.scss$/,
-				use: [
-					{
-						loader: 'style-loader'
-					},
-					{
-						loader: 'css-loader'
-					},
-					{
-						loader: 'sass-loader',
-						options: {
-							implementation: require('sass')
-						}
-					}
-				]
-			},
+  devServer: {
+    contentBase: path.join(__dirname, 'dist'),
+    compress: true,
+    open: true,
+    openPage: '/ui.html',
+    hot: true,
+    inline: true,
+    historyApiFallback: true,
+    port: 9000,
+  },
 
-			{
-				test: /\.vue$/,
-				loader: 'vue-loader'
-			},
+  module: {
+    rules: [
+      // Converts TypeScript code to JavaScript
+      // Converts TypeScript code to JavaScript
+      {
+        test: /\.tsx?$/,
+        include: path.join(__dirname, 'src'),
+        exclude: /node_modules/,
+        use: [
+          {
+            loader: 'ts-loader',
+            options: {
+              transpileOnly: true,
+              getCustomTransformers: () => ({
+                before:
+                  argv.PREVIEW_ENV === 'browser '
+                    ? [ReactRefreshTypeScript()]
+                    : [],
+              }),
+            },
+          },
+        ].filter(Boolean),
+      },
 
-			// Allows you to use "<%= require('./file.svg') %>" in your HTML code to get a data URI
-			{ test: /\.(png|jpg|gif|webp|svg)$/, loader: [{ loader: 'url-loader' }] }
-		]
-	},
+      // Enables including CSS by doing "import './file.css'" in your TypeScript code
+      {
+        test: /\.css$/,
+        loader: [{loader: 'style-loader'}, {loader: 'css-loader'}],
+      },
 
-	// Webpack tries these extensions for you if you omit the extension like "import './file'"
-	resolve: { extensions: ['.tsx', '.ts', '.jsx', '.js'] },
+      // Allows you to use "<%= require('./file.svg') %>" in your HTML code to get a data URI
+      {
+        test: /\.(png|jpg|gif|webp|svg|zip)$/,
+        loader: [{loader: 'url-loader'}],
+      },
+    ],
+  },
 
-	output: {
-		filename: '[name].js',
-		path: path.resolve(__dirname, 'dist') // Compile into a folder called "dist"
-	},
+  // Webpack tries these extensions for you if you omit the extension like "import './file'"
+  resolve: {extensions: ['.tsx', '.ts', '.jsx', '.js']},
 
-	// Tells Webpack to generate "ui.html" and to inline "ui.ts" into it
-	plugins:
-		argv.mode === 'production'
-			? [
-					new VueLoaderPlugin(),
-					new RemovePlugin({
-						after: { include: ['dist/update.js'] }
-					}),
-					new HtmlWebpackPlugin({
-						template: './src/update.html',
-						filename: 'update.html',
-						inlineSource: '.(js|css|scss)$',
-						chunks: ['update']
-					}),
-					new HtmlWebpackInlineSourcePlugin()
-			  ]
-			: [
-					new VueLoaderPlugin(),
-					new HtmlWebpackPlugin({
-						template: './src/update.html',
-						filename: 'update.html',
-						inlineSource: '.(js|css|scss)$',
-						chunks: ['update']
-					}),
-					new HtmlWebpackInlineSourcePlugin()
-			  ]
+  output: {
+    filename: '[name].js',
+    path: path.resolve(__dirname, 'dist'), // Compile into a folder called "dist"
+  },
+
+  // Tells Webpack to generate "ui.html" and to inline "ui.ts" into it
+  plugins: [
+    argv.PREVIEW_ENV === 'browser' && new ReactRefreshPlugin(),
+    argv.PREVIEW_ENV === 'browser' && new ForkTsCheckerWebpackPlugin(),
+    new HtmlWebpackPlugin({
+      template: './src/ui/ui.html',
+      filename: 'ui.html',
+      inlineSource: '.(js)$',
+      chunks: ['ui'],
+    }),
+    argv.PREVIEW_ENV !== 'browser' && new HtmlWebpackInlineSourcePlugin(),
+    new webpack.DefinePlugin({
+      'process.env': {
+        PREVIEW_ENV: JSON.stringify(argv.PREVIEW_ENV),
+      },
+    }),
+  ].filter(Boolean),
 });

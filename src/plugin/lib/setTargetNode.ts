@@ -1,4 +1,6 @@
-import {getTextCropInstances} from './getTextCropInstances';
+/*
+This code is for swapping instances in the future. For now it can be ignored
+*/
 export function setTarget() {
   console.log('Setting target');
   let newKey: string = '';
@@ -25,11 +27,13 @@ export function setTarget() {
 
   if (newKey && newKey.length) {
     figma.importComponentSetByKeyAsync(newKey).then(
-      onfufilled => {
+      () => {
+        //fufilled
         figma.clientStorage.setAsync('componentKey', newKey);
         figma.closePlugin('Target Set');
       },
-      onrejected => {
+      () => {
+        //rejected
         figma.closePlugin(
           'Target text crop component must be part of a published library',
         );

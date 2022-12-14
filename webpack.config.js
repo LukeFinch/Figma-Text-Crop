@@ -1,8 +1,10 @@
-const ReactRefreshPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
-const ReactRefreshTypeScript = require('react-refresh-typescript').default;
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const HtmlWebpackInlineSourcePlugin = require('html-webpack-inline-source-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
+const BundleAnalyzerPlugin =
+  require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+
 const webpack = require('webpack');
 const path = require('path');
 
@@ -17,20 +19,8 @@ module.exports = (env, argv) => ({
     code: './src/plugin/code.ts', // The entry point for your plugin code
   },
 
-  devServer: {
-    contentBase: path.join(__dirname, 'dist'),
-    compress: true,
-    open: true,
-    openPage: '/ui.html',
-    hot: true,
-    inline: true,
-    historyApiFallback: true,
-    port: 9000,
-  },
-
   module: {
     rules: [
-      // Converts TypeScript code to JavaScript
       // Converts TypeScript code to JavaScript
       {
         test: /\.tsx?$/,
@@ -41,12 +31,6 @@ module.exports = (env, argv) => ({
             loader: 'ts-loader',
             options: {
               transpileOnly: true,
-              getCustomTransformers: () => ({
-                before:
-                  argv.PREVIEW_ENV === 'browser '
-                    ? [ReactRefreshTypeScript()]
-                    : [],
-              }),
             },
           },
         ].filter(Boolean),
@@ -61,6 +45,7 @@ module.exports = (env, argv) => ({
       // Allows you to use "<%= require('./file.svg') %>" in your HTML code to get a data URI
       {
         test: /\.(png|jpg|gif|webp|svg|zip)$/,
+        exclude: /node_modules/,
         loader: [{loader: 'url-loader'}],
       },
     ],
@@ -72,19 +57,30 @@ module.exports = (env, argv) => ({
   output: {
     filename: '[name].js',
     path: path.resolve(__dirname, 'dist'), // Compile into a folder called "dist"
+    jsonpFunction: `webpackJsonp_${__filename}`,
+  },
+
+  optimization: {
+    minimize: argv.mode === 'production' ? true : false,
+    minimizer: [
+      new TerserPlugin({
+        terserOptions: {},
+      }),
+    ],
   },
 
   // Tells Webpack to generate "ui.html" and to inline "ui.ts" into it
   plugins: [
+    new BundleAnalyzerPlugin(),
     argv.PREVIEW_ENV === 'browser' && new ReactRefreshPlugin(),
     argv.PREVIEW_ENV === 'browser' && new ForkTsCheckerWebpackPlugin(),
     new HtmlWebpackPlugin({
       template: './src/ui/ui.html',
       filename: 'ui.html',
-      inlineSource: '.(js)$',
+      inlineSource: '.(js|css)$',
       chunks: ['ui'],
     }),
-    argv.PREVIEW_ENV !== 'browser' && new HtmlWebpackInlineSourcePlugin(),
+    new HtmlWebpackInlineSourcePlugin(),
     new webpack.DefinePlugin({
       'process.env': {
         PREVIEW_ENV: JSON.stringify(argv.PREVIEW_ENV),

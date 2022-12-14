@@ -1,4 +1,3 @@
-//import {dispatch, handleEvent} from './lib/codeMessageHandler';
 import {getGridSize, roundToGrid} from './lib/grid';
 import {
   getTextCropInstances,
@@ -21,10 +20,6 @@ interface cropData {
 }
 type ContainerNode = BaseNode & ChildrenMixin;
 
-figma.on('selectionchange', () => {
-  console.log('selection change');
-});
-
 // figma.on('documentchange', async event => {
 //   console.log(event);
 //   for (const change of event.documentChanges) {
@@ -46,24 +41,21 @@ figma.root.setRelaunchData({
 });
 
 figma.skipInvisibleInstanceChildren = true;
-switch (figma.command) {
-  case 'Create':
-    makeCropComponent();
-    break;
-  case 'Update':
-    figma.notify('Cropping page - this may take a few seconds');
-    async function handleUpdate() {
+const commandSwitch = async () => {
+  switch (figma.command) {
+    case 'Create':
+      makeCropComponent();
+      break;
+    case 'Update':
+      figma.notify('Cropping page - this may take a few seconds');
       await updateInstances(true);
-    }
-    handleUpdate();
-    break;
-  case 'UpdateMenu':
-    async function loadUI() {
+      break;
+    case 'UpdateMenu':
       let grid = await getGridSize();
       let key = await figma.clientStorage.getAsync('componentKey');
       figma.showUI(__html__, {
         themeColors: true,
-        width: 320,
+        width: 240,
         height: 320,
         visible: true,
       });
@@ -72,23 +64,23 @@ switch (figma.command) {
       if (key !== undefined) {
         emitMessage('componentKey', key);
       }
-    }
-    loadUI();
-    break;
-  case 'UpdateSelected':
-    updateInstances(true);
-    break;
-  case 'ChangeGrid':
-    promptGrid();
-    break;
-  case 'SetTarget':
-    setTarget();
-    break;
 
-  default:
-    figma.showUI(__html__);
-}
+      break;
+    case 'UpdateSelected':
+      updateInstances(true);
+      break;
+    case 'ChangeGrid':
+      promptGrid();
+      break;
+    case 'SetTarget':
+      setTarget();
+      break;
 
+    default:
+      figma.showUI(__html__);
+  }
+};
+commandSwitch();
 registerMessageHandler('UI_READY', () => {
   let sel = figma.currentPage.selection;
   let instances = sel.filter(
@@ -125,7 +117,6 @@ export async function crop(node: InstanceNode, gridSize: number) {
     ? (cropFrame.primaryAxisSizingMode = 'FIXED')
     : (cropFrame.counterAxisSizingMode = 'FIXED');
 
-  let fontName = textNode.getRangeFontName(0, 1) as FontName;
   await loadFonts(textNode);
 
   //Get Crop Profiles
@@ -150,7 +141,6 @@ export async function crop(node: InstanceNode, gridSize: number) {
   }
 
   let lH = await getLineHeight(textNode);
-  console.log('LH!!!', lH);
 
   //Copy the text outside the instance so we can manipulate it
 
@@ -189,9 +179,9 @@ async function cropNodeWithData(
   gridSize: number,
   lineHeight?: number,
 ) {
-  isNaN(gridSize) ? (gridSize = await getGridSize()) : (gridSize = 1);
-
   const {paddingTop, paddingBottom} = data;
+
+  console.log(paddingTop, paddingBottom);
 
   let n: number; //number of lines
   let textNode = (node.children[0] as ContainerNode).children[0] as TextNode;
@@ -206,7 +196,6 @@ async function cropNodeWithData(
     //This method gets the actual height of the text
     textNode.textAutoResize = 'HEIGHT';
     let textHeight = textNode.height; //Actual Height of the text
-    console.log(textHeight);
     textNode.textAutoResize = sizing; //"NONE"
     n = Math.round(textHeight / lineHeight); // Number of lines. Should always be a whole number...
   } else {
@@ -216,12 +205,12 @@ async function cropNodeWithData(
   let nodePaddingTop = paddingTop + ((n - 1) / 2) * lineHeight;
   let nodePaddingBottom = paddingBottom + ((n - 1) / 2) * lineHeight;
 
+  let totalHeight = nodePaddingTop + nodePaddingBottom;
+
   //TODO: Check the alignment of text in the text box, let users center, top or bottom align
   node.paddingTop = nodePaddingTop;
-  node.paddingBottom =
-    gridSize == 0
-      ? nodePaddingBottom
-      : roundToGrid(nodePaddingBottom + paddingTop, gridSize) - paddingTop;
+
+  node.paddingBottom = roundToGrid(totalHeight, gridSize) - nodePaddingTop;
 }
 
 async function updateInstances(shouldClose: boolean) {
@@ -297,5 +286,5 @@ registerMessageHandler('GRID_SIZE', (size: number) => {
 });
 
 registerMessageHandler('CROP_INSTANCES', () => {
-  updateInstances(false);
+  updateInstances(false).then(() => figma.notify('done'));
 });

@@ -9,10 +9,7 @@
     {"name": "1. Create Components", "command": "Create"},
     {"name": "2. Crop Instances", "command": "UpdateMenu"},
     {"separator": true},
-    {"name": "Set Grid Size", "command": "ChangeGrid"},
-    {"separator": true},
-    {"name": "Set Target Component", "command": "SetTarget"},
-    {"name": "Convert text to TextCrop Component", "command": "SwapText"}
+    {"name": "Set Grid Size", "command": "ChangeGrid"}
   ],
   "id": "951930713294228024",
   "relaunchButtons": [

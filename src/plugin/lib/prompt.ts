@@ -54,13 +54,12 @@ input.addEventListener("keyup", function(event) {
 
     </script>
 </body>
-<style>
-body{padding:20px;flex-direction:column;margin:0}h2,p{font-size:13px;color:#000;margin:0 0 8px}p{font-size:11px;color:#333}button,input{padding:4px;font-size:11px;font-weight:400}body,button{display:flex;font-family:'Inter',sans-serif}button{align-items:center;border-radius:4px;color:#fff;flex-shrink:0;font-weight:500;height:32px;padding:0 8px;text-decoration:none;outline:0;border:2px solid transparent;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;position:fixed;bottom:20px;right:20px;min-width:64px;justify-content:center;background-color:#18a0fb}button:disabled{background-color:#b3b3b3}div{display:flex;flex-direction:row}
-</style>
+<style> body { padding: 20px; flex-direction: column; margin: 0; background-color: var(--figma-color-bg); } h2, p { font-size: 13px; color: var(--figma-color-text); margin: 0 0 8px; } p { font-size: 11px; color: var(--figma-color-text-secondary); } button, input { background-color: var(--figma-color-bg); color: var(--figma-color-text); padding: 4px; font-size: 11px; font-weight: 400; } body, button { display: flex; font-family: "Inter", sans-serif; } button { align-items: center; border-radius: 4px; color: var(--figma-color-text-onbrand); flex-shrink: 0; font-weight: 500; height: 32px; padding: 0 8px; text-decoration: none; outline: 0; border: 2px solid transparent; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; position: fixed; bottom: 20px; right: 20px; min-width: 64px; justify-content: center; background-color: var(--figma-color-bg-brand); } button:disabled { background-color: var(--figma-color-bg-disabled-secondary); } div { display: flex; flex-direction: row; } </style> 
 `,
     {
       width: 300,
       height: 150,
+      themeColors: true,
     },
   );
 

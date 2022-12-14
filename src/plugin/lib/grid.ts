@@ -1,7 +1,7 @@
 import {prompt} from './prompt';
 
 export const roundToGrid = (number: number, gridSize: number) => {
-  return Math.round(number / gridSize) * gridSize;
+  return number - (number % gridSize) + (number % gridSize) > 0 ? gridSize : 0;
 };
 
 export const getGridSize = async () => {

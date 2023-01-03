@@ -18,6 +18,20 @@ function zeroResize(
   }
 }
 
+const zeroHeightFrame = () => {
+  const frame = figma.createFrame();
+  const line = figma.createLine();
+  line.resize(50, 0);
+  frame.appendChild(line);
+  frame.layoutAlign = 'MIN';
+  frame.layoutMode = 'VERTICAL';
+  frame.layoutGrow = 0;
+  frame.layoutMode = 'HORIZONTAL';
+  frame.primaryAxisSizingMode = 'AUTO';
+  line.remove();
+  return frame;
+};
+
 export default async function makeCropComponent() {
   figma
     .loadFontAsync({
@@ -44,10 +58,10 @@ export default async function makeCropComponent() {
       componentAutoWidth.description = '';
 
       // Create FRAME
-      var autoWidthFrame = figma.createFrame();
+      var autoWidthFrame = zeroHeightFrame();
       //autoWidthFrame.resizeWithoutConstraints(52.0000000000, 0.01)
 
-      zeroResize(autoWidthFrame, 52, 1 / Number.MAX_SAFE_INTEGER);
+      // zeroResize(autoWidthFrame, 52, 1 / Number.MAX_SAFE_INTEGER);
 
       autoWidthFrame.name = 'Crop';
       autoWidthFrame.relativeTransform = [
@@ -123,8 +137,9 @@ export default async function makeCropComponent() {
 
       // Create FRAME
 
-      var cropFrame = figma.createFrame();
-      zeroResize(cropFrame, 52, 1 / Number.MAX_SAFE_INTEGER);
+      var cropFrame = zeroHeightFrame();
+      // zeroResize(cropFrame, 52, 1 / Number.MAX_SAFE_INTEGER);
+
       cropFrame.name = 'Crop';
       cropFrame.relativeTransform = [
         [1, 0, 0],
@@ -188,7 +203,7 @@ export default async function makeCropComponent() {
         figma.currentPage,
       );
       componentSet.resize(165.0, 48.5400009155);
-      componentSet.name = 'Text Crop';
+      componentSet.name = 'Text Plop';
       componentSet.visible = true;
       componentSet.locked = false;
       componentSet.opacity = 1;
@@ -208,7 +223,19 @@ export default async function makeCropComponent() {
       componentSet.constrainProportions = false;
       componentSet.layoutGrow = 0;
       componentSet.exportSettings = [];
-      componentSet.fills = [];
+      componentSet.backgrounds = [
+        {
+          type: 'SOLID',
+          visible: true,
+          opacity: 1,
+          blendMode: 'NORMAL',
+          color: {
+            r: 1,
+            g: 1,
+            b: 1,
+          },
+        },
+      ];
       componentSet.strokes = [
         {
           type: 'SOLID',
@@ -234,7 +261,7 @@ export default async function makeCropComponent() {
       componentSet.counterAxisAlignItems = 'MIN';
       componentSet.primaryAxisSizingMode = 'AUTO';
       componentSet.layoutGrids = [];
-      componentSet.backgrounds = [];
+      // componentSet.backgrounds = [];
       componentSet.clipsContent = true;
       componentSet.guides = [];
       componentSet.expanded = true;

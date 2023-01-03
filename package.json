@@ -1,7 +1,7 @@
 {
-  "name": "vue-plugin-template",
+  "name": "figma-text-crop-plugin",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "code.ts",
   "license": "MIT",
   "scripts": {
     "build": "rm -rf ./dist && webpack --mode=production",

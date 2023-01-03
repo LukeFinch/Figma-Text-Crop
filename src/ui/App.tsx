@@ -35,6 +35,29 @@ export default function App() {
   );
 
   useEffect(() => {
+    window.addEventListener(
+      'message',
+      function (event) {
+        console.log(event.data);
+        if (
+          event.source === window.parent.parent &&
+          event.data &&
+          typeof event.data === 'object' &&
+          'figmaMessage' in event.data
+        ) {
+          event.stopImmediatePropagation();
+          const figmaMessage = event.data.figmaMessage;
+          if (figmaMessage.type === 'THEME') {
+            console.log('THEME MESSAGE');
+            const figmaStyle = document.getElementById('figma-style');
+          }
+        }
+      },
+      true,
+    );
+  });
+
+  useEffect(() => {
     const themeObserver = new MutationObserver(function (mutations) {
       console.log('mutation', darkMode ? 'dark' : 'light');
       mutations.forEach(function (mutation) {
@@ -47,7 +70,7 @@ export default function App() {
             setTheme(darkTheme);
           } else {
             setDarkMode(false);
-            setTheme(darkTheme);
+            setTheme(lightTheme);
           }
         }
       });

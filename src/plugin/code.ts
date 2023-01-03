@@ -1,9 +1,11 @@
-import {getGridSize, roundToGrid} from './lib/grid';
+import {getGridSize, roundNearest, roundToGrid} from './lib/grid';
 import {
   getTextCropInstances,
   hasTextCropData,
 } from './lib/getTextCropInstances';
 import makeCropComponent from './makeCropComponent';
+
+console.log(figma.currentUser);
 
 import {prompt} from './lib/prompt';
 import {loadFonts, getLineHeight} from './lib/util';
@@ -181,7 +183,7 @@ async function cropNodeWithData(
 ) {
   const {paddingTop, paddingBottom} = data;
 
-  console.log(paddingTop, paddingBottom);
+  console.log('CROP NODE WITH DATA');
 
   let n: number; //number of lines
   let textNode = (node.children[0] as ContainerNode).children[0] as TextNode;
@@ -206,11 +208,44 @@ async function cropNodeWithData(
   let nodePaddingBottom = paddingBottom + ((n - 1) / 2) * lineHeight;
 
   let totalHeight = nodePaddingTop + nodePaddingBottom;
+  let roundedHeight =
+    gridSize !== 0 ? roundNearest(totalHeight, gridSize) : totalHeight;
 
   //TODO: Check the alignment of text in the text box, let users center, top or bottom align
   node.paddingTop = nodePaddingTop;
 
-  node.paddingBottom = roundToGrid(totalHeight, gridSize) - nodePaddingTop;
+  //if paddingBottom is less than 0 it will bug out..
+  let bottomValue = roundedHeight - node.paddingTop;
+  console.log(roundedHeight);
+  console.log(node.paddingTop);
+  if (bottomValue < 0) {
+    bottomValue = (bottomValue % gridSize) + gridSize;
+  }
+  console.log(bottomValue, 'bottom');
+  node.paddingBottom = bottomValue;
+
+  console.log('before debugmode?');
+
+  //debug view
+  // const debugMode = true;
+  // console.log(debugMode);
+  // if (debugMode) {
+  console.log('DEBUG MODE');
+  figma.createRectangle();
+  let debug = figma.createText();
+  await figma.loadFontAsync({family: 'DM Sans', style: 'Regular'});
+  debug.fontName = {family: 'DM Sans', style: 'Regular'};
+  debug.characters = `total height: ${totalHeight}
+    rounded height: ${roundedHeight}
+    gridSize: ${gridSize}
+    paddingTop:  ${node.paddingTop}
+    paddingBottom: ${node.paddingBottom}
+    `;
+
+  debug.x = node.x + node.width + 8;
+  debug.y = node.y;
+  figma.currentPage.appendChild(debug);
+  // }
 }
 
 async function updateInstances(shouldClose: boolean) {

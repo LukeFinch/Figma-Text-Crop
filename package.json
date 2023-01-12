@@ -22,6 +22,8 @@
     "lodash": "^4.17.21",
     "newskit": "^6.6.0",
     "postcss": "^8.2.10",
+    "preact": "^10.11.3",
+    "preact-compat": "^3.19.0",
     "react": "18.0.0",
     "react-dom": "18.0.0",
     "typescript": "^4.1.3",

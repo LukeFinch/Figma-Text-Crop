@@ -203,7 +203,7 @@ export default async function makeCropComponent() {
         figma.currentPage,
       );
       componentSet.resize(165.0, 48.5400009155);
-      componentSet.name = 'Text Plop';
+      componentSet.name = 'Text Crop';
       componentSet.visible = true;
       componentSet.locked = false;
       componentSet.opacity = 1;

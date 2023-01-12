@@ -2,8 +2,6 @@
   "name": "Text Crop",
   "api": "1.0.0",
   "main": "dist/code.js",
-  "enableProposedApi": true,
-  "permissions": ["currentuser"],
   "ui": "dist/ui.html",
   "editorType": ["figma"],
   "menu": [
@@ -14,10 +12,6 @@
   ],
   "id": "951930713294228024",
   "relaunchButtons": [
-    {
-      "command": "LogData",
-      "name": "Show Data"
-    },
     {
       "command": "Update",
       "name": "Crop Page"

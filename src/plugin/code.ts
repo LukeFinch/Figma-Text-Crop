@@ -1,11 +1,6 @@
-import {getGridSize, roundNearest, roundToGrid} from './lib/grid';
-import {
-  getTextCropInstances,
-  hasTextCropData,
-} from './lib/getTextCropInstances';
+import {getGridSize, roundNearest} from './lib/grid';
+import {getTextCropInstances} from './lib/getTextCropInstances';
 import makeCropComponent from './makeCropComponent';
-
-console.log(figma.currentUser);
 
 import {prompt} from './lib/prompt';
 import {loadFonts, getLineHeight} from './lib/util';
@@ -22,6 +17,7 @@ interface cropData {
 }
 type ContainerNode = BaseNode & ChildrenMixin;
 
+//TODO: Listen for doc changes and auto crop
 // figma.on('documentchange', async event => {
 //   console.log(event);
 //   for (const change of event.documentChanges) {
@@ -83,6 +79,7 @@ const commandSwitch = async () => {
   }
 };
 commandSwitch();
+
 registerMessageHandler('UI_READY', () => {
   let sel = figma.currentPage.selection;
   let instances = sel.filter(
@@ -183,8 +180,6 @@ async function cropNodeWithData(
 ) {
   const {paddingTop, paddingBottom} = data;
 
-  console.log('CROP NODE WITH DATA');
-
   let n: number; //number of lines
   let textNode = (node.children[0] as ContainerNode).children[0] as TextNode;
 
@@ -216,43 +211,19 @@ async function cropNodeWithData(
 
   //if paddingBottom is less than 0 it will bug out..
   let bottomValue = roundedHeight - node.paddingTop;
-  console.log(roundedHeight);
-  console.log(node.paddingTop);
+
   if (bottomValue < 0) {
     bottomValue = (bottomValue % gridSize) + gridSize;
   }
-  console.log(bottomValue, 'bottom');
+
   node.paddingBottom = bottomValue;
-
-  console.log('before debugmode?');
-
-  //debug view
-  // const debugMode = true;
-  // console.log(debugMode);
-  // if (debugMode) {
-  console.log('DEBUG MODE');
-  figma.createRectangle();
-  let debug = figma.createText();
-  await figma.loadFontAsync({family: 'DM Sans', style: 'Regular'});
-  debug.fontName = {family: 'DM Sans', style: 'Regular'};
-  debug.characters = `total height: ${totalHeight}
-    rounded height: ${roundedHeight}
-    gridSize: ${gridSize}
-    paddingTop:  ${node.paddingTop}
-    paddingBottom: ${node.paddingBottom}
-    `;
-
-  debug.x = node.x + node.width + 8;
-  debug.y = node.y;
-  figma.currentPage.appendChild(debug);
-  // }
 }
 
 async function updateInstances(shouldClose: boolean) {
   const t0 = Date.now();
   var grid = await getGridSize();
 
-  var instances: InstanceNode[];
+  let instances: InstanceNode[];
 
   //User is editing a text node
   if (
@@ -266,7 +237,7 @@ async function updateInstances(shouldClose: boolean) {
       figma.currentPage.selectedTextRange.node.parent as InstanceNode,
     ];
   } else {
-    let instances: InstanceNode[] = [];
+    instances = [];
     //User clicked update page
     if (figma.command == 'Update') {
       instances = getTextCropInstances([figma.currentPage]);

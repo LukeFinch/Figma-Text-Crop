@@ -1,13 +1,30 @@
 {
 	"compilerOptions": {
-		// this aligns with Vue's browser support
-		"target": "es6",
-		// if using webpack 2+ or rollup, to leverage tree shaking:
-		"module": "es2015",
-		"moduleResolution": "node",
-		"typeRoots": [
-			"./node_modules/@types",
-			"./node_modules/@figma"
-		  ]
-	}
+    "declaration": true,
+    "declarationMap": true,
+    "target": "es5",
+    "module": "commonjs",
+    "jsx": "react",
+    "sourceMap": true,
+    "strict": false,
+    "strictNullChecks": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "preserveSymlinks": true,
+    "noImplicitAny": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "lib": ["DOM", "ES2019"],
+    "typeRoots": ["./node_modules/@types", "./node_modules/@figma"]
+    // // this aligns with Vue's browser support
+    // "target": "es6",
+    // // if using webpack 2+ or rollup, to leverage tree shaking:
+    // "module": "es2015",
+    // "moduleResolution": "node",
+    // "jsx": "preserve",
+    // "skipLibCheck": true,
+    // "allowSyntheticDefaultImports": true,
+    // "esModuleInterop": true,
+    // "lib": ["dom", "es2015"],
+  }
 }
